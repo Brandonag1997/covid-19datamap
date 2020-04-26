@@ -6,7 +6,7 @@ var margin = {
   bottom:10,
   left: 10
 },
-width = 960 - margin.left - margin.right,
+width = 960 - margin.left - margin.right + 1000,
 height = 550 - margin.bottom - margin.top,
 sliderPosition = {top: height - 50, left: width / 2 + 10,
                   height:40, width: width - 100},
@@ -199,17 +199,76 @@ function buildLegend() {
 
 function buildGraph(graphData, name)
 {
+
+    // console.log("building graph using " + data);
+  var	parseDateG = d3.time.format("%Y-%m").parse;
+
+  var xG = d3.scale.ordinal().rangeRoundBands([0, width], .05);
+  var yG = d3.scale.linear().range([height, 0]);
+
+  var xAxisG = d3.svg.axis()
+    .scale(xG)
+    .orient("bottom");
+    // .tickFormat(d3.format("d"));
+
+  var yAxisG = d3.svg.axis()
+    .scale(yG)
+    .orient("left")
+    .ticks(10);
+
   plot = d3.select("body")
     .append("svg")
-    .attr("width", 300)
-    .attr("height", 200)
+    .attr("width", 1800)
+    .attr("height", 600)
     .attr("class", "graph");
-    // console.log("building graph using " + data);
-  for (day in graphData) {
-    console.log(day);
-  }
-  // var xg = d3.scale.ordinal().rangeRoundBands([0, width], .05);
 
+
+  // console.log(graphData);
+  graphData.forEach(function(d) {
+    d.Date = d.Date;
+    d.Confirmed = +d.Confirmed;
+  });
+
+  xG.domain(graphData.map(function(d) {return d.Date; }));
+  yG.domain([0, d3.max(graphData, function(d) {return d.Confirmed; })]);
+
+  plot.append("g")
+      .attr("class", "x axis")
+      .attr("transform", "translate(150," + 400 + ")")
+      .call(xAxisG)
+    .selectAll("text")
+      .style("text-anchor", "end")
+      .attr("dx", "-.8em")
+      .attr("dy", "-.55em")
+      .attr("transform", "rotate(-90)");
+
+  plot.append("g")
+      .attr("class", "y axis")
+      .attr("transform", "translate(150,0)")
+      .call(yAxisG)
+    .append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("y", 6)
+      .attr("dy", ".71em")
+      .style("text-anchor", "end");
+      // .text("Value ($)");
+
+  plot.selectAll("bar")
+      .data(graphData)
+    .enter().append("rect")
+      .attr("class", "bar")
+      .attr("transform", "translate(300,0)")
+      .attr("x", function(d) {return xG(d.Date); })
+      .attr("width", xG.rangeBand())
+      .attr("y", function(d) { return yG(d.Confirmed);})
+      .attr("height", function(d) { return height - yG(d.Confirmed); });
+
+  // Object.entries(graphData).forEach(([key, value]) => {
+  //   console.log(key + ' - ' + value) // key - value
+  //
+  // });
+
+  // x.domain(data.map(function(d) {}))
 
 }
 

@@ -89,7 +89,7 @@ app.get("/getMax", function(req, res){
 });
 
 app.get("/getTotalByDay", function(req, res){
-    let statement = "SELECT Date, SUM(Confirmed) AS Confirmed, SUM(Confirmed_last24h) AS Confirmed_last24h, SUM(Deaths) AS Deaths, SUM(Deaths_last24h) AS Deaths_last24h FROM world_data GROUP BY Date;"
+    let statement = "SELECT Date, SUM(Confirmed) AS Confirmed, SUM(Confirmed_last24h) AS Confirmed_last24h, SUM(Deaths) AS Deaths, SUM(Deaths_last24h) AS Deaths_last24h FROM world_data GROUP BY Date ORDER BY Date;"
 
     conn.query(statement,function(err, rows, fields) {
         if (err) {
@@ -97,13 +97,13 @@ app.get("/getTotalByDay", function(req, res){
             res.json({"failed":"getTotalByDay"}); res.status(500);
 
         } else {
-          let output = {};
+          let output = [];
           // console.log(rows);
           for(let i = 0; i < rows.length; i++){
-            if (!(rows[i].Date in output)) {
-              output[rows[i].Date] = [];
-            }
-            output[rows[i].Date].push({"Confirmed": rows[i].Confirmed, "Confirmed_last24h": rows[i].Confirmed_last24h, "Deaths": rows[i].Deaths, "Deaths_last24h": rows[i].Deaths_last24h});
+            // if (!(rows[i].Date in output)) {
+            //   output[rows[i].Date] = [];
+            // }
+            output.push({"Date": rows[i].Date, "Confirmed": rows[i].Confirmed, "Confirmed_last24h": rows[i].Confirmed_last24h, "Deaths": rows[i].Deaths, "Deaths_last24h": rows[i].Deaths_last24h});
           }
           // console.log(output);
           res.json(output);
