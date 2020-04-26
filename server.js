@@ -33,28 +33,22 @@ conn.connect(function(err) {
 app.get("/countrydata", function(req, res){
     // let statement = "SELECT I.`alpha-3` AS id, W.Date AS Date, W.Confirmed AS Confirmed FROM world AS W INNER JOIN iso as I ON W.Country = I.who_name GROUP BY I.`alpha-3`,W.Date,W.Confirmed;";
     // let statement = "SELECT DISTINCT id_date.id AS id, IFNULL(W.Date,id_date.Date) AS Date, IFNULL(W.Confirmed,0) AS Confirmed FROM world AS W RIGHT JOIN (SELECT T1.id AS ID, T1.Date AS Date, I1.who_name AS Name  FROM (SELECT DISTINCT i.`alpha-3` AS id, W.Date as Date FROM iso AS i, world AS w) AS T1 INNER JOIN iso AS I1 ON T1.id = I1.`alpha-3`) AS id_date ON W.Country = id_date.Name AND W.Date = id_date.Date UNION SELECT 'CHN' AS id, Date, Confirmed FROM china WHERE Location='Total';";
-    let statement = "SELECT DISTINCT id_date.id AS id, DATE(IFNULL(W.Date,id_date.Date)) AS Date, IFNULL(W.Confirmed,0) AS Confirmed FROM world AS W RIGHT JOIN (SELECT I1.`country-code` AS ID, T1.Date AS Date, I1.who_name AS Name  FROM (SELECT DISTINCT i.`alpha-3` AS id, W.Date as Date FROM iso AS i, world AS w) AS T1 INNER JOIN iso AS I1 ON T1.id = I1.`alpha-3`) AS id_date ON W.Country = id_date.Name AND W.Date = id_date.Date UNION SELECT '156' AS id, DATE(Date) as Date, Confirmed FROM china1 WHERE Location='Total';";
-    // let statement = "SELECT DISTINCT id_date.id AS id, IFNULL(W.Date,id_date.Date) AS Date, IFNULL(W.Confirmed,0) AS Confirmed FROM world AS W RIGHT JOIN (SELECT I1.`country-code` AS ID, T1.Date AS Date, I1.who_name AS Name  FROM (SELECT DISTINCT i.`alpha-3` AS id, W.Date as Date FROM iso AS i, world AS w) AS T1 INNER JOIN iso AS I1 ON T1.id = I1.`alpha-3`) AS id_date ON W.Country = id_date.Name AND W.Date = id_date.Date;";
-
+    // let statement = "SELECT DISTINCT id_date.id AS id, DATE(IFNULL(W.Date,id_date.Date)) AS Date, IFNULL(W.Confirmed,0) AS Confirmed FROM world_data AS W RIGHT JOIN (SELECT I1.`country-code` AS ID, T1.Date AS Date, I1.who_name AS Name  FROM (SELECT DISTINCT i.`alpha-3` AS id, W.Date as Date FROM iso AS i, world_data AS w) AS T1 INNER JOIN iso AS I1 ON T1.id = I1.`alpha-3`) AS id_date ON W.Country = id_date.Name AND W.Date = id_date.Date;";
+    let statement = "SELECT DISTINCT id_date.id AS id, DATE(IFNULL(W.Date,id_date.Date)) AS Date, IFNULL(W.Confirmed,0) AS Confirmed FROM world_data AS W RIGHT JOIN (SELECT I1.`country-code` AS ID, T1.Date AS Date, I1.`alpha-3` AS Name FROM (SELECT DISTINCT i.`alpha-3` AS id, W.Date as Date FROM iso AS i, world_data AS w) AS T1 INNER JOIN iso AS I1 ON T1.id = I1.`alpha-3`) AS id_date ON W.iso_code = id_date.Name AND W.Date = id_date.Date;"
 
     conn.query(statement,function(err, rows, fields) {
         if (err) {
             console.log('Error during query select...' + err.sqlMessage);
-            res.json({"failed":"getYearsForIndicator"}); res.status(500);
+            res.json({"failed":"countrydata"}); res.status(500);
 
         } else {
             let output = {};
-            // let output = {["AFG", "ALA", "ALB", "DZA", "ASM", "AND", "AGO", "AIA", "ATA", "ATG", "ARG", "ARM", "ABW", "AUS", "AUT", "AZE", "BHS", "BHR", "BGD", "BRB", "BLR", "BEL", "BLZ", "BEN", "BMU", "BTN", "BOL", "BES", "BIH", "BWA", "BVT", "BRA", "IOT", "BRN", "BGR", "BFA", "BDI", "CPV", "KHM", "CMR", "CAN", "CYM", "CAF", "TCD", "CHL", "CHN", "CXR", "CCK", "COL", "COM", "COG", "COD", "COK", "CRI", "CIV", "HRV", "CUB", "CUW", "CYP", "CZE", "DNK", "DJI", "DMA", "DOM", "ECU", "EGY", "SLV", "GNQ", "ERI", "EST", "SWZ", "ETH", "FLK", "FRO", "FJI", "FIN", "FRA", "GUF", "PYF", "ATF", "GAB", "GMB", "GEO", "DEU", "GHA", "GIB", "GRC", "GRL", "GRD", "GLP", "GUM", "GTM", "GGY", "GIN", "GNB", "GUY", "HTI", "HMD", "VAT", "HND", "HKG", "HUN", "ISL", "IND", "IDN", "IRN", "IRQ", "IRL", "IMN", "ISR", "ITA", "JAM", "JPN", "JEY", "JOR", "KAZ", "KEN", "KIR", "PRK", "KOR", "KWT", "KGZ", "LAO", "LVA", "LBN", "LSO", "LBR", "LBY", "LIE", "LTU", "LUX", "MAC", "MDG", "MWI", "MYS", "MDV", "MLI", "MLT", "MHL", "MTQ", "MRT", "MUS", "MYT", "MEX", "FSM", "MDA", "MCO", "MNG", "MNE", "MSR", "MAR", "MOZ", "MMR", "NAM", "NRU", "NPL", "NLD", "NCL", "NZL", "NIC", "NER", "NGA", "NIU", "NFK", "MKD", "MNP", "NOR", "OMN", "PAK", "PLW", "PSE", "PAN", "PNG", "PRY", "PER", "PHL", "PCN", "POL", "PRT", "PRI", "QAT", "REU", "ROU", "RUS", "RWA", "BLM", "SHN", "KNA", "LCA", "MAF", "SPM", "VCT", "WSM", "SMR", "STP", "SAU", "SEN", "SRB", "SYC", "SLE", "SGP", "SXM", "SVK", "SVN", "SLB", "SOM", "ZAF", "SGS", "SSD", "ESP", "LKA", "SDN", "SUR", "SJM", "SWE", "CHE", "SYR", "TWN", "TJK", "TZA", "THA", "TLS", "TGO", "TKL", "TON", "TTO", "TUN", "TUR", "TKM", "TCA", "TUV", "UGA", "UKR", "ARE", "GBR", "USA", "UMI", "URY", "UZB", "VUT", "VEN", "VNM", "VGB", "VIR", "WLF", "ESH", "YEM", "ZMB", "ZWE"]};
-
+            // console.log(rows);
             for(let i = 0; i < rows.length; i++){
               if (!(rows[i].id in output)) {
                 output[rows[i].id] = [];
               }
               output[rows[i].id].push({"date": rows[i].Date, "cases": rows[i].Confirmed});
-              // if (i==0) {
-              //   console.log(rows[i])
-              // }
-
             }
 
             res.json(output);
@@ -63,12 +57,12 @@ app.get("/countrydata", function(req, res){
 });
 
 app.get("/dateRange", function(req, res){
-    let statement = "SELECT Min(DATE(Date)) AS First_Day ,MAX(DATE(Date)) AS Last_Day FROM world;"
+    let statement = "SELECT Min(DATE(Date)) AS First_Day ,MAX(DATE(Date)) AS Last_Day FROM world_data;"
 
     conn.query(statement,function(err, rows, fields) {
         if (err) {
             console.log('Error during query select...' + err.sqlMessage);
-            res.json({"failed":"getYearsForIndicator"}); res.status(500);
+            res.json({"failed":"dateRange"}); res.status(500);
 
         } else {
             let output = {"First_Day": rows[0].First_Day, "Last_Day": rows[0].Last_Day};
@@ -79,17 +73,41 @@ app.get("/dateRange", function(req, res){
 });
 
 app.get("/getMax", function(req, res){
-    let statement = "SELECT MAX(CAST(Confirmed AS UNSIGNED)) AS Confirmed, MAX(CAST(Confirmed_last24h AS UNSIGNED)) AS Confirmed_last24h, MAX(CAST(Deaths AS UNSIGNED)) AS Deaths, MAX(CAST(Deaths_last24h AS UNSIGNED)) AS Deaths_last24h FROM world;"
+    let statement = "SELECT MAX(CAST(Confirmed AS UNSIGNED)) AS Confirmed, MAX(CAST(Confirmed_last24h AS UNSIGNED)) AS Confirmed_last24h, MAX(CAST(Deaths AS UNSIGNED)) AS Deaths, MAX(CAST(Deaths_last24h AS UNSIGNED)) AS Deaths_last24h FROM world_data;"
 
     conn.query(statement,function(err, rows, fields) {
         if (err) {
             console.log('Error during query select...' + err.sqlMessage);
-            res.json({"failed":"getYearsForIndicator"}); res.status(500);
+            res.json({"failed":"getMax"}); res.status(500);
 
         } else {
             let output = {"Confirmed": rows[0].Confirmed, "Confirmed_last24h": rows[0].Confirmed_last24h, "Deaths": rows[0].Deaths, "Deaths_last24h": rows[0].Deaths_last24h};
 
             res.json(output);
+        }
+    });
+});
+
+app.get("/getTotalByDay", function(req, res){
+    let statement = "SELECT Date, SUM(Confirmed) AS Confirmed, SUM(Confirmed_last24h) AS Confirmed_last24h, SUM(Deaths) AS Deaths, SUM(Deaths_last24h) AS Deaths_last24h FROM world_data GROUP BY Date;"
+
+    conn.query(statement,function(err, rows, fields) {
+        if (err) {
+            console.log('Error during query select...' + err.sqlMessage);
+            res.json({"failed":"getTotalByDay"}); res.status(500);
+
+        } else {
+          let output = {};
+          // console.log(rows);
+          for(let i = 0; i < rows.length; i++){
+            if (!(rows[i].Date in output)) {
+              output[rows[i].Date] = [];
+            }
+            output[rows[i].Date].push({"Confirmed": rows[i].Confirmed, "Confirmed_last24h": rows[i].Confirmed_last24h, "Deaths": rows[i].Deaths, "Deaths_last24h": rows[i].Deaths_last24h});
+          }
+          // console.log(output);
+          res.json(output);
+
         }
     });
 });

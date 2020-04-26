@@ -64,7 +64,7 @@
             document.body.scrollLeft
 
       nodel.html(content)
-        .style('opacity', 1).style('pointer-events', 'all')
+        .style('opacity', .6).style('pointer-events', 'all')
 
       while (i--) nodel.classed(directions[i], false)
       coords = directionCallbacks.get(dir).apply(this)
@@ -256,6 +256,8 @@
         .style('opacity', 0)
         .style('pointer-events', 'none')
         .style('box-sizing', 'border-box')
+        .style('background-color','gray')
+        .style('box-shadow','4px 4px 10px rgba(0, 100, 100, 0.4)')
 
       return div.node()
     }

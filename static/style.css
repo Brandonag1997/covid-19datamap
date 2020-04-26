@@ -62,6 +62,12 @@ path {
 	top:30px;
 }
 
+.graph {
+	position:absolute;
+	left:750px;
+	top:30px;
+}
+
 button.play {
   cursor: pointer;
   position: absolute;

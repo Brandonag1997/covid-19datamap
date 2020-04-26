@@ -25,7 +25,8 @@ var key, legend, y, yaxis;
 var ramp;
 var formatLegend = d3.format('.0f');
 // var ticks;
-
+//graph vars
+var plot;
 //Tool tips to see data
 var format = d3.format(",");
 
@@ -33,29 +34,31 @@ var tip = d3.tip()
   .attr('class', 'd3-tip')
   .offset([-10, 0])
   .html(function(d) {
-    return "<strong>Country: </strong><span class='details'>" + d.properties.name + "<br></span>" + "<strong>Confirmed Cases: </strong><span class='details'>" + format(d.properties[attributeArray[currentAttribute]]) + "</span>";
+    return "<strong>" + d.properties.name + "</strong>";
+    // return "<strong>Country: </strong><span class='details'>" + d.properties.name + "<br></span>" + "<strong>Confirmed Cases: </strong><span class='details'>" + format(d.properties[attributeArray[currentAttribute]]) + "</span>";
   })
 
 
 var firstDay, lastDay;
 function getScaleData(){
-queue()   // queue function loads all external data files asynchronously
-  .defer(d3.json, "/dateRange")
-  .defer(d3.json, "/getMax")
+queue()   // queue function loads all data asynchronously
+  .defer(d3.json, "/dateRange") //range of dates we're working with
+  .defer(d3.json, "/getMax") //max value in dataset, used to set legend scale
+  .defer(d3.json, "/getTotalByDay")
   .await(dateCallback);
 }
-function dateCallback(error, data, maxData) {
+function dateCallback(error, data, maxData, totals) {
   startingValue = new Date(data['First_Day'])
   endingValue = new Date(data['Last_Day'])
   maxConfirmed = maxData['Confirmed']
   maxConfirmed_last24h = maxData['Confirmed_last24h']
   maxDeaths = maxData['Deaths']
   maxDeaths_last24h = maxData['Deaths_last24h']
-  // console.log(maxConfirmed);
   // ramp = d3.scale.linear().domain([0,maxConfirmed/4,2*maxConfirmed/4,3*maxConfirmed/4,maxConfirmed]).range(["#ca0020", "#f4a582", "#f7f7f7", "#92c5de", "#0571b0"]);
   ramp = d3.scale.log().clamp(true).domain([1,maxConfirmed]).range([lowColor,highColor]).nice()
   buildSlider();
   buildLegend();
+  buildGraph(totals,'World');
   setMap();
 }
 
@@ -178,21 +181,8 @@ function buildLegend() {
     .ticks(5)
     .tickSize(1)
     .tickFormat(function(interval, d) {
-      // return formatLegend(interval);
-      // console.log(d,interval);
-      // formatLegend(interval);
-      // return ((d%10 !== 6)) ? " ": formatLegend(interval);
-      // if (d%10 == 6) {
-      //   return formatLegend(interval);
-      // }
-      // else if (d%10 == 0) {
-      //   return formatLegend(interval);
-      // }
-      // else {
-      //   return " ";
-      // }
-      console.log(maxConfirmed);
-      if ((d%10 == 6) || (d%10 == 2) || (d%10 == 0)) {
+      // if ((d%10 == 6) || (d%10 == 2) || (d%10 == 0)) {
+      if ((d%10 == 2)) {
         return formatLegend(interval);
       }
       else {
@@ -207,13 +197,19 @@ function buildLegend() {
     .call(yaxis)
 }
 
+function buildGraph(graphData, name)
+{
+  plot = d3.select("body")
+    .append("svg")
+    .attr("width", 300)
+    .attr("height", 200)
+    .attr("class", "graph");
+    // console.log("building graph using " + data);
+  for (day in graphData) {
+    console.log(day);
+  }
+  // var xg = d3.scale.ordinal().rangeRoundBands([0, width], .05);
 
-
-
-//datamap
-function init() {
-getScaleData();
-// setMap();
 
 }
 
@@ -258,7 +254,6 @@ loadData();  // let's load our data next
 }
 
 function loadData() {
-
 queue()   // queue function loads all external data files asynchronously
   .defer(d3.json, "countries-110m.json")  // datamap geometries
   .defer(d3.json, "/countrydata") //data for each country
@@ -267,6 +262,7 @@ queue()   // queue function loads all external data files asynchronously
 
 function processData(error,world,countryData) {
   // console.log("WHO Data", countryData);
+
 
   var countries = world.objects.countries.geometries;  // path to geometries
 
@@ -394,8 +390,6 @@ function drawMap(world) {
 }
 
 function sequenceMap() {
-  // console.log(formatDateDB(value));
-  // var dataRange = getDataRange(); // get the min/max values from the current year's range of data values
   d3.selectAll('.country')
     .on('mouseover', function(d){
       tip.show(d);
@@ -411,10 +405,9 @@ function sequenceMap() {
     .style("stroke", "#000000")
     .style("stroke-width", "1")
     .style("fill", function(d) {
-      // console.log(ramp(d.properties[attributeArray[currentAttribute]]));
       return ramp(d.properties[attributeArray[currentAttribute]])
     });
 
 }
 
-window.onload = init();  // magic starts here
+window.onload = getScaleData();  // load in data to scale map legend and slider
