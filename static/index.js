@@ -26,10 +26,12 @@ var ramp;
 var formatLegend = d3.format('.0f');
 // var ticks;
 //graph vars
-var plot;
-var heightG = 200;
-var widthG = 470
-var formatDateG = d3.time.format("%Y-%m")
+var plot; //the svg for the barchart
+var heightG = 200 + 10 + 10;
+var widthG = 470;
+var formatDateG = d3.time.format("%b-%Y");
+var tipG; //tooltip for barchart
+var formatDateToolTip = d3.time.format("%d-%b-%Y");
 //Tool tips to see data
 var format = d3.format(",");
 
@@ -212,10 +214,16 @@ function buildGraph(graphData, name)
   var xAxisG = d3.svg.axis()
     .scale(xG)
     .orient("bottom")
-    .tickFormat(function(d) {
-      return formatDateG(d);
+    .tickFormat(function(interval, d) {
+      var formatTest = d3.time.format("%d");
+      if (formatTest(interval)=="01") { //only show ticks for the first of every month
+        return formatDateG(interval);
+      }
+      else {
+        return " ";
+      }
     });
-    // .tickFormat(formatDate("d"));
+
 
   var yAxisG = d3.svg.axis()
     .scale(yG)
@@ -237,6 +245,23 @@ function buildGraph(graphData, name)
 
   xG.domain(graphData.map(function(d) {return d.Date; }));
   yG.domain([0, d3.max(graphData, function(d) {return d.Confirmed; })]);
+
+  tipG = d3.tip()
+    .attr('class', 'd3-tip')
+    .offset([-10,0])
+    .html(function(d) {
+      return "<span>" + formatDateToolTip(d.Date) + "<br></span>" + "<strong>Confirmed:</strong> <span style='color:red'>" + d.Confirmed + "</span>";
+    })
+
+  plot.call(tipG);
+
+  plot.append("text")
+    .attr("x", (widthG / 2) + 10)
+    .attr("y", 15)
+    .attr("text-anchor", "middle")
+    .style("font-size", "16px")
+    // .style("text-decoration", "underline")
+    .text("Global Confirmed Cases");
 
   plot.append("g")
       .attr("class", "x axis")
@@ -262,13 +287,16 @@ function buildGraph(graphData, name)
   plot.selectAll("bar")
       .data(graphData)
     .enter().append("rect")
+      .style("fill", "green")
       .attr("class", "bar")
       .attr("transform", "translate(150,0)")
       .attr("x", function(d) {return xG(d.Date); })
       .attr("width", xG.rangeBand())
       // .attr("width", 4)
       .attr("y", function(d) { return yG(d.Confirmed);})
-      .attr("height", function(d) { return heightG - yG(d.Confirmed); });
+      .attr("height", function(d) { return heightG - yG(d.Confirmed); })
+      .on('mouseover', tipG.show)
+      .on('mouseout', tipG.hide);
 
   // Object.entries(graphData).forEach(([key, value]) => {
   //   console.log(key + ' - ' + value) // key - value
