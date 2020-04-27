@@ -6,7 +6,7 @@ var margin = {
   bottom:10,
   left: 10
 },
-width = 960 - margin.left - margin.right + 1000,
+width = 960 - margin.left - margin.right,
 height = 550 - margin.bottom - margin.top,
 sliderPosition = {top: height - 50, left: width / 2 + 10,
                   height:40, width: width - 100},
@@ -27,6 +27,9 @@ var formatLegend = d3.format('.0f');
 // var ticks;
 //graph vars
 var plot;
+var heightG = 200;
+var widthG = 470
+var formatDateG = d3.time.format("%Y-%m")
 //Tool tips to see data
 var format = d3.format(",");
 
@@ -203,13 +206,16 @@ function buildGraph(graphData, name)
     // console.log("building graph using " + data);
   var	parseDateG = d3.time.format("%Y-%m").parse;
 
-  var xG = d3.scale.ordinal().rangeRoundBands([0, width], .05);
-  var yG = d3.scale.linear().range([height, 0]);
+  var xG = d3.scale.ordinal().rangeRoundBands([0, widthG], .05);
+  var yG = d3.scale.linear().range([heightG, 0]);
 
   var xAxisG = d3.svg.axis()
     .scale(xG)
-    .orient("bottom");
-    // .tickFormat(d3.format("d"));
+    .orient("bottom")
+    .tickFormat(function(d) {
+      return formatDateG(d);
+    });
+    // .tickFormat(formatDate("d"));
 
   var yAxisG = d3.svg.axis()
     .scale(yG)
@@ -218,14 +224,14 @@ function buildGraph(graphData, name)
 
   plot = d3.select("body")
     .append("svg")
-    .attr("width", 1800)
+    .attr("width", 700)
     .attr("height", 600)
     .attr("class", "graph");
 
 
   // console.log(graphData);
   graphData.forEach(function(d) {
-    d.Date = d.Date;
+    d.Date = new Date(d.Date);
     d.Confirmed = +d.Confirmed;
   });
 
@@ -234,7 +240,7 @@ function buildGraph(graphData, name)
 
   plot.append("g")
       .attr("class", "x axis")
-      .attr("transform", "translate(150," + 400 + ")")
+      .attr("transform", "translate(150," + heightG + ")")
       .call(xAxisG)
     .selectAll("text")
       .style("text-anchor", "end")
@@ -252,16 +258,17 @@ function buildGraph(graphData, name)
       .attr("dy", ".71em")
       .style("text-anchor", "end");
       // .text("Value ($)");
-
+  // console.log(xG.rangeBand());
   plot.selectAll("bar")
       .data(graphData)
     .enter().append("rect")
       .attr("class", "bar")
-      .attr("transform", "translate(300,0)")
+      .attr("transform", "translate(150,0)")
       .attr("x", function(d) {return xG(d.Date); })
       .attr("width", xG.rangeBand())
+      // .attr("width", 4)
       .attr("y", function(d) { return yG(d.Confirmed);})
-      .attr("height", function(d) { return height - yG(d.Confirmed); });
+      .attr("height", function(d) { return heightG - yG(d.Confirmed); });
 
   // Object.entries(graphData).forEach(([key, value]) => {
   //   console.log(key + ' - ' + value) // key - value
