@@ -64,8 +64,8 @@ path {
 
 .graph {
 	position:absolute;
-	left:750px;
-	top:30px;
+	left:800px;
+	top:80px;
 }
 
 button.play {
@@ -98,4 +98,27 @@ button.play {
   fill: black;
   text-align: center;
   font-size: 18px;
+}
+
+.d3-tip {
+  line-height: 1;
+  font-weight: bold;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  border-radius: 2px;
+}
+
+.bar {
+  fill: green ;
+}
+
+.bar:hover {
+  fill: orangered ;
+}
+
+.axisG {
+  stroke: gray;
+  fill: none;
+  stroke-width: 1px;
 }

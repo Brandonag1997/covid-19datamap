@@ -16,6 +16,11 @@ formatDateDB = d3.time.format("%Y-%m-%d")
 var startingValue, endingValue;
 parseDate = d3.time.format("%Y-%m-%d").parse
 var handle, slider, sliderBox, brush, button, svg, x, xaxis
+//dropdown vars
+var dropDownChoices = ["Confirmed Cases", "Confirmed Cases last 24h", "Deaths", "Deaths last 24h"];
+var dropDownVars = ["Confirmed", "Confirmed_last24h", "Deaths", "Deaths_last24h"];
+var selectedVar = "Confirmed";
+var dropDown;
 //legend vars
 var lowColor = '#002fff'; //'#f9f9f9';
 var highColor = '#bc2a66';
@@ -39,8 +44,8 @@ var tip = d3.tip()
   .attr('class', 'd3-tip')
   .offset([-10, 0])
   .html(function(d) {
-    return "<strong>" + d.properties.name + "</strong>";
-    // return "<strong>Country: </strong><span class='details'>" + d.properties.name + "<br></span>" + "<strong>Confirmed Cases: </strong><span class='details'>" + format(d.properties[attributeArray[currentAttribute]]) + "</span>";
+    // return "<strong>" + d.properties.name + "</strong>";
+    return "<strong>Country: </strong><span class='details'>" + d.properties.name + "<br></span>" + "<strong>" + selectedVar + ": </strong><span class='details'>" + format(d.properties[attributeArray[currentAttribute]]) + "</span>";
   })
 
 
@@ -62,6 +67,7 @@ function dateCallback(error, data, maxData, totals) {
   // ramp = d3.scale.linear().domain([0,maxConfirmed/4,2*maxConfirmed/4,3*maxConfirmed/4,maxConfirmed]).range(["#ca0020", "#f4a582", "#f7f7f7", "#92c5de", "#0571b0"]);
   ramp = d3.scale.log().clamp(true).domain([1,maxConfirmed]).range([lowColor,highColor]).nice()
   buildSlider();
+  buildDropDown();
   buildLegend();
   buildGraph(totals,'World');
   setMap();
@@ -96,19 +102,14 @@ function buildSlider() {
         .attr("width", width + margin.left + margin.right + 100)
         .attr("height", 150)
       .append("g")
-  // sliderBox = svg.append("g")
         .attr("class", "slider-box")
         .attr("transform", "translate(" + 100 + ","
                                         + 40 + ")")
-      // .attr("height", sliderPosition.height)
         .attr("height", 200)
         .attr("width", sliderPosition.width + 200)
-        // .selectAll(".tick line")
-        // .attr("transform", "translate(15,0)")
     .call(d3.svg.axis()
       .scale(x)
       .orient("bottom")
-
       .tickFormat(function(d) {
         return formatDate(d);
       })
@@ -142,6 +143,26 @@ function buildSlider() {
     .attr("transform", "translate(" + (-18) + " ," + (- 15) + ")");
     // .attr("transform", "translate(" + (-18) + " ," + (sliderPosition.height / 2 - 25) + ")");
 
+}
+
+function buildDropDown() {
+  dropDown = d3.select("body").append("select")
+    .attr("class", "var-list")
+    .on('change', onchange);
+
+  var options = dropDown.selectAll("option")
+   .data(dropDownChoices)
+   .enter()
+   .append("option")
+    .text(function (d) {return d;});
+
+  function onchange() {
+    selectedVar = d3.select('select').property('value');
+    var newVar = dropDownVars[dropDownChoices.indexOf(selectedVar)];
+    // updatePage(newVar)
+    console.log(selectedVar);
+    console.log(newVar);
+  }
 }
 
 function buildLegend() {
@@ -202,8 +223,7 @@ function buildLegend() {
     .call(yaxis)
 }
 
-function buildGraph(graphData, name)
-{
+function buildGraph(graphData, name) {
 
     // console.log("building graph using " + data);
   var	parseDateG = d3.time.format("%Y-%m").parse;
@@ -233,7 +253,8 @@ function buildGraph(graphData, name)
   plot = d3.select("body")
     .append("svg")
     .attr("width", 700)
-    .attr("height", 600)
+    .attr("height", 500)
+    .attr("transform", "translate(0," + 0 + ")")
     .attr("class", "graph");
 
 
@@ -250,8 +271,8 @@ function buildGraph(graphData, name)
     .attr('class', 'd3-tip')
     .offset([-10,0])
     .html(function(d) {
-      return "<span>" + formatDateToolTip(d.Date) + "<br></span>" + "<strong>Confirmed:</strong> <span style='color:red'>" + d.Confirmed + "</span>";
-    })
+      return "<span>" + formatDateToolTip(d.Date) + "<br></span>" + "<strong>" + selectedVar +":</strong> <span style='color:red'>" + d.Confirmed + "</span>";
+    });
 
   plot.call(tipG);
 
@@ -261,11 +282,11 @@ function buildGraph(graphData, name)
     .attr("text-anchor", "middle")
     .style("font-size", "16px")
     // .style("text-decoration", "underline")
-    .text("Global Confirmed Cases");
+    .text("Global " + selectedVar);
 
   plot.append("g")
-      .attr("class", "x axis")
-      .attr("transform", "translate(150," + heightG + ")")
+      .attr("class", "x axisG")
+      .attr("transform", "translate(100," + heightG + ")")
       .call(xAxisG)
     .selectAll("text")
       .style("text-anchor", "end")
@@ -274,8 +295,9 @@ function buildGraph(graphData, name)
       .attr("transform", "rotate(-90)");
 
   plot.append("g")
-      .attr("class", "y axis")
-      .attr("transform", "translate(150,0)")
+      .attr("class", "y axisG")
+      .style("stroke-width", "1px")
+      .attr("transform", "translate(100,0)")
       .call(yAxisG)
     .append("text")
       .attr("transform", "rotate(-90)")
@@ -287,9 +309,8 @@ function buildGraph(graphData, name)
   plot.selectAll("bar")
       .data(graphData)
     .enter().append("rect")
-      .style("fill", "green")
       .attr("class", "bar")
-      .attr("transform", "translate(150,0)")
+      .attr("transform", "translate(100,0)")
       .attr("x", function(d) {return xG(d.Date); })
       .attr("width", xG.rangeBand())
       // .attr("width", 4)
