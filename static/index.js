@@ -37,6 +37,10 @@ var widthG = 470;
 var formatDateG = d3.time.format("%b-%Y");
 var tipG; //tooltip for barchart
 var formatDateToolTip = d3.time.format("%d-%b-%Y");
+var graphData;
+var maxVar;
+var maxTotalConfirmed, maxTotalConfirmed_last24h, maxTotalDeaths, maxTotalDeaths_last24h;
+
 //Tool tips to see data
 var format = d3.format(",");
 
@@ -54,22 +58,28 @@ function getScaleData(){
 queue()   // queue function loads all data asynchronously
   .defer(d3.json, "/dateRange") //range of dates we're working with
   .defer(d3.json, "/getMax") //max value in dataset, used to set legend scale
+  .defer(d3.json, "/getTotalMax")
   .defer(d3.json, "/getTotalByDay")
   .await(dateCallback);
 }
-function dateCallback(error, data, maxData, totals) {
+function dateCallback(error, data, maxData, maxTotals, totals) {
+  graphData = totals;
   startingValue = new Date(data['First_Day'])
   endingValue = new Date(data['Last_Day'])
   maxConfirmed = maxData['Confirmed']
   maxConfirmed_last24h = maxData['Confirmed_last24h']
   maxDeaths = maxData['Deaths']
   maxDeaths_last24h = maxData['Deaths_last24h']
+  maxTotalConfirmed = maxTotals['Confirmed']
+  maxTotalConfirmed_last24h = maxTotals['Confirmed_last24h']
+  maxTotalDeaths = maxTotals['Deaths']
+  maxTotalDeaths_last24h = maxTotals['Deaths_last24h']
   // ramp = d3.scale.linear().domain([0,maxConfirmed/4,2*maxConfirmed/4,3*maxConfirmed/4,maxConfirmed]).range(["#ca0020", "#f4a582", "#f7f7f7", "#92c5de", "#0571b0"]);
   ramp = d3.scale.log().clamp(true).domain([1,maxConfirmed]).range([lowColor,highColor]).nice()
   buildSlider();
   buildDropDown();
   buildLegend();
-  buildGraph(totals,'World');
+  buildGraph('World', selectedVar);
   setMap();
 }
 
@@ -159,10 +169,16 @@ function buildDropDown() {
   function onchange() {
     selectedVar = d3.select('select').property('value');
     var newVar = dropDownVars[dropDownChoices.indexOf(selectedVar)];
-    // updatePage(newVar)
-    console.log(selectedVar);
-    console.log(newVar);
+    updatePage(newVar);
+    // console.log(selectedVar);
+    // console.log(newVar);
   }
+}
+
+function updatePage(newVar) {
+  buildGraph('World', newVar);
+  setMap(newVar);
+  // console.log('reloading page');
 }
 
 function buildLegend() {
@@ -223,13 +239,29 @@ function buildLegend() {
     .call(yaxis)
 }
 
-function buildGraph(graphData, name) {
+function buildGraph(name, newVar) {
 
     // console.log("building graph using " + data);
   var	parseDateG = d3.time.format("%Y-%m").parse;
 
+  if (newVar=='Confirmed') {
+    maxVar = maxTotalConfirmed;
+  }
+  else if (newVar=='Confirmed_last24h') {
+    maxVar = maxTotalConfirmed_last24h;
+  }
+  else if (newVar=='Deaths') {
+    maxVar = maxTotalDeaths;
+  }
+  else if (newVar=='Deaths_last24h') {
+    maxVar = maxTotalDeaths_last24h;
+  }
+  console.log(newVar);
+  console.log(maxVar);
   var xG = d3.scale.ordinal().rangeRoundBands([0, widthG], .05);
-  var yG = d3.scale.linear().range([heightG, 0]);
+  var yG = d3.scale.linear()
+    .domain([0, maxVar])
+    .range([heightG, 0]);
 
   var xAxisG = d3.svg.axis()
     .scale(xG)
@@ -250,33 +282,70 @@ function buildGraph(graphData, name) {
     .orient("left")
     .ticks(10);
 
+  d3.select("#bar_graph").remove();
+
   plot = d3.select("body")
     .append("svg")
-    .attr("width", 700)
-    .attr("height", 500)
-    .attr("transform", "translate(0," + 0 + ")")
-    .attr("class", "graph");
+      .attr("id","bar_graph")
+      .attr("width", 700)
+      .attr("height", 500)
+      .attr("transform", "translate(0," + 0 + ")")
+      .attr("class", "graph");
 
 
   // console.log(graphData);
   graphData.forEach(function(d) {
     d.Date = new Date(d.Date);
     d.Confirmed = +d.Confirmed;
+    d.Confirmed_last24h = +d.Confirmed_last24h;
+    d.Deaths = +d.Deaths;
+    d.Deaths_last24h = +d.Deaths_last24h;
   });
 
   xG.domain(graphData.map(function(d) {return d.Date; }));
-  yG.domain([0, d3.max(graphData, function(d) {return d.Confirmed; })]);
+  if (newVar=='Confirmed') {
+    yG.domain([0, d3.max(graphData, function(d) {return d.Confirmed; })]);
+  }
+  else if (newVar=='Confirmed_last24h') {
+    yG.domain([0, d3.max(graphData, function(d) {return d.Confirmed_last24h; })]);
+  }
+  else if (newVar=='Deaths') {
+    yG.domain([0, d3.max(graphData, function(d) {return d.Deaths; })]);
+  }
+  else if (newVar=='Deaths_last24h') {
+    yG.domain([0, d3.max(graphData, function(d) {return d.Deaths_last24h; })]);
+  }
+
+
 
   tipG = d3.tip()
     .attr('class', 'd3-tip')
     .offset([-10,0])
     .html(function(d) {
-      return "<span>" + formatDateToolTip(d.Date) + "<br></span>" + "<strong>" + selectedVar +":</strong> <span style='color:red'>" + d.Confirmed + "</span>";
+      //need to find a better way to do this
+      if (newVar=='Confirmed') {
+        return "<span>" + formatDateToolTip(d.Date) + "<br></span>" + "<strong>" + selectedVar +":</strong> <span style='color:red'>" + d.Confirmed + "</span>";
+      }
+      else if (newVar=='Confirmed_last24h') {
+        return "<span>" + formatDateToolTip(d.Date) + "<br></span>" + "<strong>" + selectedVar +":</strong> <span style='color:red'>" + d.Confirmed_last24h + "</span>";
+      }
+      else if (newVar=='Deaths') {
+        return "<span>" + formatDateToolTip(d.Date) + "<br></span>" + "<strong>" + selectedVar +":</strong> <span style='color:red'>" + d.Deaths + "</span>";
+      }
+      else if (newVar=='Deaths_last24h') {
+        return "<span>" + formatDateToolTip(d.Date) + "<br></span>" + "<strong>" + selectedVar +":</strong> <span style='color:red'>" + d.Deaths_last24h + "</span>";
+      }
+      else {
+        return "error";
+      }
     });
 
   plot.call(tipG);
 
+  d3.select("#graph_title").remove();
+
   plot.append("text")
+    .attr("id","graph_title")
     .attr("x", (widthG / 2) + 10)
     .attr("y", 15)
     .attr("text-anchor", "middle")
@@ -314,8 +383,34 @@ function buildGraph(graphData, name) {
       .attr("x", function(d) {return xG(d.Date); })
       .attr("width", xG.rangeBand())
       // .attr("width", 4)
-      .attr("y", function(d) { return yG(d.Confirmed);})
-      .attr("height", function(d) { return heightG - yG(d.Confirmed); })
+      .attr("y", function(d) {
+        if (newVar=='Confirmed') {
+          return yG(d.Confirmed);
+        }
+        else if (newVar=='Confirmed_last24h') {
+          return yG(d.Confirmed_last24h);
+        }
+        else if (newVar=='Deaths') {
+          return yG(d.Deaths);
+        }
+        else if (newVar=='Deaths_last24h') {
+          return yG(d.Deaths_last24h);
+        }
+        })
+      .attr("height", function(d) {
+        if (newVar=='Confirmed') {
+          return heightG - yG(d.Confirmed);
+        }
+        else if (newVar=='Confirmed_last24h') {
+          return heightG - yG(d.Confirmed_last24h);
+        }
+        else if (newVar=='Deaths') {
+          return heightG - yG(d.Deaths);
+        }
+        else if (newVar=='Deaths_last24h') {
+          return heightG - yG(d.Deaths_last24h);
+        }
+        })
       .on('mouseover', tipG.show)
       .on('mouseout', tipG.hide);
 

@@ -113,6 +113,23 @@ app.get("/getTotalByDay", function(req, res){
     });
 });
 
+app.get("/getTotalMax", function(req, res){
+    let statement = "SELECT MAX(Confirmed) AS Confirmed, MAX(Confirmed_last24h) AS Confirmed_last24h, MAX(Deaths) AS Deaths, MAX(Deaths_last24h) AS Deaths_last24h FROM (SELECT Date, SUM(Confirmed) AS Confirmed, SUM(Confirmed_last24h) AS Confirmed_last24h, SUM(Deaths) AS Deaths, SUM(Deaths_last24h) AS Deaths_last24h FROM world_data GROUP BY Date ORDER BY Date) AS S;"
+
+    conn.query(statement,function(err, rows, fields) {
+        if (err) {
+            console.log('Error during query select...' + err.sqlMessage);
+            res.json({"failed":"getTotalMax"}); res.status(500);
+
+        } else {
+          let output = {"Confirmed": rows[0].Confirmed, "Confirmed_last24h": rows[0].Confirmed_last24h, "Deaths": rows[0].Deaths, "Deaths_last24h": rows[0].Deaths_last24h};
+          // console.log(output);
+          res.json(output);
+
+        }
+    });
+});
+
 // Only use static files from static folder
 app.use(express.static("./static"));
 
