@@ -1,0 +1,8 @@
+{
+  "name": "covid-19datamap",
+  "version": "1.0.0",
+  "description": "node app to display COVID-19 cases",
+  "main": "server.js",
+  "scripts": {
+  "start": "node server.js"
+}
