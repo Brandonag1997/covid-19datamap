@@ -1,4 +1,4 @@
-//globals
+//global vars
 var newVar = 'Confirmed';
 var projection, path, graticule, svg, attributeArray = [], currentAttribute, playing = false;
 var margin = {
@@ -7,7 +7,7 @@ var margin = {
   bottom:10,
   left: 10
 },
-width = 960 - margin.left - margin.right,
+width = 820 - margin.left - margin.right,
 height = 550 - margin.bottom - margin.top,
 sliderPosition = {top: height - 50, left: width / 2 + 10,
                   height:40, width: width - 100},
@@ -79,7 +79,7 @@ function dateCallback(error, data, maxData, maxTotals, totals) {
   ramp = d3.scale.log().clamp(true).domain([1,maxConfirmed]).range([lowColor,highColor]).nice()
 
   buildSlider();
-  buildDropDown();
+  // buildDropDown();
   buildLegend();
   buildGraph('World', selectedVar);
   setMap();
@@ -95,7 +95,8 @@ function buildSlider() {
 
   svg1 = d3.select("body")
     .append("svg")
-      .attr("width", width + margin.left + margin.right + 100)
+      .attr("id","map_element")
+      .attr("width", width + margin.left + margin.right)
       .attr("height", height + margin.top + margin.bottom);
 
   svg1.append("text")
@@ -130,7 +131,7 @@ function buildSlider() {
 
   button = d3.select("body").append("button")
     .attr("class", "play")
-    .text("Start")
+    .text("Play")
 
   ////slider code
   //brush for slider
@@ -217,7 +218,7 @@ function buildDropDown() {
 function updatePage(newVar) {
   buildLegend();
   buildGraph('World', newVar);
-  setMap(newVar);
+  setMap();
   // console.log('reloading page');
 }
 
@@ -299,7 +300,7 @@ function buildLegend() {
     .call(yaxis)
 }
 
-function buildGraph(name, newVar) {
+function buildGraph(name) {
 
     // console.log("building graph using " + data);
   var	parseDateG = d3.time.format("%Y-%m").parse;
@@ -484,32 +485,24 @@ function buildGraph(name, newVar) {
 }
 
 function setMap() {
-  // svg = d3.select("body").append("svg")
-  //     .attr("width", width + margin.left + margin.right + 100)
-  //     .attr("height", height + margin.top + margin.bottom + 100)
-  //   .append("g")
-  //     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
-// width = 960, height = 580;  // map width and height, matches
-
-projection = d3.geo.mercator()   // define our projection with parameters
+projection = d3.geo.mercator()   // define projection
   .scale(100)
   .translate([width / 2, height / 2]);
 
-path = d3.geo.path()  // create path generator function
-    .projection(projection);  // add our define projection to it
+path = d3.geo.path()
+    .projection(projection);
 
-svg.append("svg")   // append a svg to our html div to hold our map
+svg.append("svg")   // append a svg to hold map
   .attr("id","map")
     .attr("width", width)
     .attr("height", height);
 
-svg.append("defs").append("path")   // prepare some svg for outer container of svg elements
+svg.append("defs").append("path")   // add the projection path to the svg
     .datum({type: "Sphere"})
     .attr("id", "sphere")
     .attr("d", path);
 
-svg.call(tip)
+svg.call(tip) //display tooltip when hovering over country
 loadData();  // let's load our data next
 
 }
@@ -635,7 +628,6 @@ function processData(error,world,countryData) {
       // .duration(500*4)
       .style("opacity", 1)
   }
-
   playAnimation();
 }
 
