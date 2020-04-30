@@ -1,4 +1,5 @@
 //globals
+var newVar = 'Confirmed';
 var projection, path, graticule, svg, attributeArray = [], currentAttribute, playing = false;
 var margin = {
   top: 150,
@@ -91,11 +92,32 @@ function buildSlider() {
     .range([0, sliderPosition.width])//
     .clamp(true);
 
-  svg = d3.select("body").append("svg")
+    // d3.select("#map_title").remove();
+    //
+    // d3.select("body").append("text")
+    //   .attr("id","map_title")
+    //   .attr("x", (width / 2) + 10)
+    //   .attr("y", 0)
+    //   .attr("text-anchor", "middle")
+    //   .style("font-size", "16px")
+    //   // .style("text-decoration", "underline")
+    //   .text("COVID-19 Map");
+
+
+  svg1 = d3.select("body")
+    .append("svg")
       .attr("width", width + margin.left + margin.right + 100)
-      .attr("height", height + margin.top + margin.bottom)
-    .append("g")
-      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+      .attr("height", height + margin.top + margin.bottom);
+
+  svg1.append("text")
+    .attr("id","map_title")
+      .attr("x", 150)
+      .attr("y", 30)
+      .style("font-size", "36px")
+    .text("COVID-19 Map")
+
+  svg = svg1.append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
   button = d3.select("body").append("button")
     .attr("class", "play")
@@ -168,7 +190,7 @@ function buildDropDown() {
 
   function onchange() {
     selectedVar = d3.select('select').property('value');
-    var newVar = dropDownVars[dropDownChoices.indexOf(selectedVar)];
+    newVar = dropDownVars[dropDownChoices.indexOf(selectedVar)];
     updatePage(newVar);
     // console.log(selectedVar);
     // console.log(newVar);
@@ -176,14 +198,18 @@ function buildDropDown() {
 }
 
 function updatePage(newVar) {
+  buildLegend();
   buildGraph('World', newVar);
   setMap(newVar);
   // console.log('reloading page');
 }
 
 function buildLegend() {
+  d3.select("#legend_id").remove();
+
   key = d3.select("body")
     .append("svg")
+    .attr("id", "legend_id")
     .attr("width", w)
     .attr("height", h)
     .attr("class", "legend");
@@ -213,9 +239,26 @@ function buildLegend() {
     .style("fill", "url(#gradient)")
     .attr("transform", "translate(0,10)");
 
+  if (newVar=='Confirmed') {
+    ramp = d3.scale.log().clamp(true).domain([1,maxConfirmed]).range([lowColor,highColor]).nice()
+    maxVar = maxConfirmed;
+  }
+  else if (newVar=='Confirmed_last24h') {
+    ramp = d3.scale.log().clamp(true).domain([1,maxConfirmed_last24h]).range([lowColor,highColor]).nice()
+    maxVar = maxConfirmed_last24h;
+  }
+  else if (newVar=='Deaths') {
+    ramp = d3.scale.log().clamp(true).domain([1,maxDeaths]).range([lowColor,highColor]).nice()
+    maxVar = maxDeaths;
+  }
+  else if (newVar=='Deaths_last24h') {
+    ramp = d3.scale.log().clamp(true).domain([1,maxDeaths_last24h]).range([lowColor,highColor]).nice()
+    maxVar = maxDeaths_last24h;
+  }
+
   y = d3.scale.log()
     .range([h, 0])
-    .domain([1,maxConfirmed]);
+    .domain([1,maxVar]);
 
   yaxis = d3.svg.axis()
     .scale(y)
@@ -256,8 +299,8 @@ function buildGraph(name, newVar) {
   else if (newVar=='Deaths_last24h') {
     maxVar = maxTotalDeaths_last24h;
   }
-  console.log(newVar);
-  console.log(maxVar);
+  // console.log(newVar);
+  // console.log(maxVar);
   var xG = d3.scale.ordinal().rangeRoundBands([0, widthG], .05);
   var yG = d3.scale.linear()
     .domain([0, maxVar])
@@ -439,9 +482,8 @@ projection = d3.geo.mercator()   // define our projection with parameters
 path = d3.geo.path()  // create path generator function
     .projection(projection);  // add our define projection to it
 
-graticule = d3.geo.graticule(); // create a graticule
-
 svg.append("svg")   // append a svg to our html div to hold our map
+  .attr("id","map")
     .attr("width", width)
     .attr("height", height);
 
@@ -450,14 +492,6 @@ svg.append("defs").append("path")   // prepare some svg for outer container of s
     .attr("id", "sphere")
     .attr("d", path);
 
-// svg.append("use")   // use that svg to style with css
-//     .attr("class", "stroke")
-//     .attr("xlink:href", "#sphere");
-//
-// svg.append("path")    // use path generator to draw a graticule
-//     .datum(graticule)
-//     .attr("class", "graticule")
-//     .attr("d", path);
 svg.call(tip)
 loadData();  // let's load our data next
 
@@ -484,16 +518,27 @@ function processData(error,world,countryData) {
         i--;
     }
   }
+  // console.log(countries);
   for (var i in countries) {    // for each geometry object
     data_i=countryData[parseInt(countries[i].id)];
-
+    // console.log(data_i);
     for (var k in data_i) //for each day that country reported cases
     {
       if(attributeArray.indexOf(data_i[k].date.split("T")[0]) == -1) //too find max date range
       {
         attributeArray.push(data_i[k].date.split("T")[0]); //array to store all the dates
       }
-      countries[i].properties[data_i[k].date.split("T")[0]] = Number(data_i[k].cases) //store the number of cases for each date in the properties of the country
+      if (newVar=='Confirmed') {
+        countries[i].properties[data_i[k].date.split("T")[0]] = Number(data_i[k].cases) //store the number of cases for each date in the properties of the country
+      } else if (newVar=='Confirmed_last24h') {
+        countries[i].properties[data_i[k].date.split("T")[0]] = Number(data_i[k].cases_last24) //store the number of cases for each date in the properties of the country
+      }
+      else if (newVar=='Deaths') {
+        countries[i].properties[data_i[k].date.split("T")[0]] = Number(data_i[k].deaths) //store the number of cases for each date in the properties of the country
+      }
+      else if (newVar=='Deaths_last24h') {
+        countries[i].properties[data_i[k].date.split("T")[0]] = Number(data_i[k].deaths_last24) //store the number of cases for each date in the properties of the country
+      }
     }
 
   }
@@ -586,15 +631,10 @@ function drawMap(world) {
     .attr("id", function(d) { return "code_" + d.id; }, true)  // give each a unique id for access later
     .attr("d", path); // create them using the svg path generator defined above
 
-  // var dataRange = getDataRange(); // get the min/max values from the current year's range of data values
   d3.selectAll('.country')  // select all the countries
-  // .attr('fill-opacity', function(d) {
-  //     return getColor(d.properties[attributeArray[currentAttribute]], dataRange);
-  // });
     .style("stroke", "#fff")
     .style("stroke-width", "1")
     .style("fill", function(d) {
-      // console.log(ramp(d.properties[attributeArray[currentAttribute]]));
       return ramp(d.properties[attributeArray[currentAttribute]])
     });
 }
