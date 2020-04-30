@@ -77,6 +77,7 @@ function dateCallback(error, data, maxData, maxTotals, totals) {
   maxTotalDeaths_last24h = maxTotals['Deaths_last24h']
   // ramp = d3.scale.linear().domain([0,maxConfirmed/4,2*maxConfirmed/4,3*maxConfirmed/4,maxConfirmed]).range(["#ca0020", "#f4a582", "#f7f7f7", "#92c5de", "#0571b0"]);
   ramp = d3.scale.log().clamp(true).domain([1,maxConfirmed]).range([lowColor,highColor]).nice()
+
   buildSlider();
   buildDropDown();
   buildLegend();
@@ -92,18 +93,6 @@ function buildSlider() {
     .range([0, sliderPosition.width])//
     .clamp(true);
 
-    // d3.select("#map_title").remove();
-    //
-    // d3.select("body").append("text")
-    //   .attr("id","map_title")
-    //   .attr("x", (width / 2) + 10)
-    //   .attr("y", 0)
-    //   .attr("text-anchor", "middle")
-    //   .style("font-size", "16px")
-    //   // .style("text-decoration", "underline")
-    //   .text("COVID-19 Map");
-
-
   svg1 = d3.select("body")
     .append("svg")
       .attr("width", width + margin.left + margin.right + 100)
@@ -111,10 +100,30 @@ function buildSlider() {
 
   svg1.append("text")
     .attr("id","map_title")
-      .attr("x", 150)
-      .attr("y", 30)
-      .style("font-size", "36px")
+    .attr("x", 150)
+    .attr("y", 30)
+    .style("font-size", "36px")
     .text("COVID-19 Map")
+
+  dropDown = d3.select("body")
+    .append("select")
+    .attr("class", "var-list")
+    .attr("y", 200)
+    .on('change', onchange);
+
+  var options = dropDown.selectAll("option")
+   .data(dropDownChoices)
+   .enter()
+   .append("option")
+    .text(function (d) {return d;});
+
+  function onchange() {
+    selectedVar = d3.select('select').property('value');
+    newVar = dropDownVars[dropDownChoices.indexOf(selectedVar)];
+    updatePage(newVar);
+    // console.log(selectedVar);
+    // console.log(newVar);
+    }
 
   svg = svg1.append("g")
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
@@ -129,10 +138,12 @@ function buildSlider() {
     .x(x)
     .extent([startingValue, startingValue])
 
-  sliderBox = d3.select("body")
+  var svgBox = d3.select("body")
       .append("svg")
         .attr("width", width + margin.left + margin.right + 100)
-        .attr("height", 150)
+        .attr("height", 150);
+
+  sliderBox = svgBox
       .append("g")
         .attr("class", "slider-box")
         .attr("transform", "translate(" + 100 + ","
@@ -174,27 +185,33 @@ function buildSlider() {
     .text(formatDate(startingValue))
     .attr("transform", "translate(" + (-18) + " ," + (- 15) + ")");
     // .attr("transform", "translate(" + (-18) + " ," + (sliderPosition.height / 2 - 25) + ")");
+  // dropDown = svgBox.append("g")
+  //   .attr("width", 20)
+  //   .attr("height", 20);
 
 }
 
 function buildDropDown() {
-  dropDown = d3.select("body").append("select")
-    .attr("class", "var-list")
-    .on('change', onchange);
+  // dropDown
+  //   .append("select")
+  //   .attr("class", "var-list")
+  //   .attr("y", 100)
+  //   .on('change', onchange);
 
-  var options = dropDown.selectAll("option")
-   .data(dropDownChoices)
-   .enter()
-   .append("option")
-    .text(function (d) {return d;});
 
-  function onchange() {
-    selectedVar = d3.select('select').property('value');
-    newVar = dropDownVars[dropDownChoices.indexOf(selectedVar)];
-    updatePage(newVar);
-    // console.log(selectedVar);
-    // console.log(newVar);
-  }
+  // var options = dropDown.selectAll("option")
+  //  .data(dropDownChoices)
+  //  .enter()
+  //  .append("option")
+  //   .text(function (d) {return d;});
+  //
+  // function onchange() {
+  //   selectedVar = d3.select('select').property('value');
+  //   newVar = dropDownVars[dropDownChoices.indexOf(selectedVar)];
+  //   updatePage(newVar);
+  //   // console.log(selectedVar);
+  //   // console.log(newVar);
+  // }
 }
 
 function updatePage(newVar) {
@@ -331,7 +348,7 @@ function buildGraph(name, newVar) {
     .append("svg")
       .attr("id","bar_graph")
       .attr("width", 700)
-      .attr("height", 500)
+      .attr("height", 460)
       .attr("transform", "translate(0," + 0 + ")")
       .attr("class", "graph");
 
