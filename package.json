@@ -5,4 +5,15 @@
   "main": "server.js",
   "scripts": {
   "start": "node server.js"
+},
+  "repository": {
+  "type": "git",
+  "url": ""
+},
+  "author": "",
+  "license": "",
+  "bugs": {
+  "url": ""
+},
+  "homepage": ""
 }
