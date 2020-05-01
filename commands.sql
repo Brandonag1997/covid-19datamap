@@ -52,10 +52,10 @@ FROM 'C:\Users\Brand\Documents\corona\owid-covid-data.csv' DELIMITER ',' CSV HEA
 CREATE TABLE world_data (
   iso_code CHAR(3),
   Country VARCHAR(100),
-  Confirmed TEXT,
-  Confirmed_last24h TEXT,
-  Deaths TEXT,
-  Deaths_last24h TEXT,
+  Confirmed INT,
+  Confirmed_last24h INT,
+  Deaths INT,
+  Deaths_last24h INT,
   Date TEXT
 );
 
