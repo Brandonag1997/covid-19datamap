@@ -2,4 +2,5 @@ covid.pem
 node_modules
 mysqlkey.json
 package-lock.json
-
+databaseInstructions.txt
+owid-covid-data.csv
