@@ -27,12 +27,108 @@ conn.connect(function(err) {
 		console.log("Database successfully connected!");
     console.log("Updating database...");
     updateDatabase();
+    instertISO();
 	}
 });
+
+function instertISO() {
+  let stream = fs.createReadStream("iso-table.csv");
+  //temporary table definition
+  let q1 = "CREATE TEMPORARY TABLE iso_full(name TEXT, `alpha-2` TEXT, `alpha-3` TEXT, `country-code` TEXT, `iso_3166-2` TEXT, region TEXT, `sub-region` TEXT, `intermediate-region` TEXT, `region-code` TEXT, `sub-region-code` TEXT, `intermediate-region-code` TEXT);"
+  //need a better way to insert new data
+  let q2 = "DROP TABLE iso;"
+  let q3 = "CREATE TABLE iso(name TEXT, `alpha-3` TEXT, `country-code` TEXT);"
+  conn.query(q1, function(err) {
+      if (err) {
+        console.log("error creating temporary table");
+        console.log(err);
+      }
+    });
+
+  conn.query(q2, function(err) {
+      if (err) {
+        console.log("error dropping table, it probably doesn't exist");
+        console.log(err);
+      }
+    });
+
+  conn.query(q3, function(err) {
+      if (err) {
+        console.log("error creating table");
+        console.log(err);
+      }
+    });
+
+  let csvData = [];
+  let csvStream = fastcsv
+    .parse()
+    .on("data", function(data) {
+      csvData.push(data);
+    })
+    .on("end", function() {
+      // remove the first line: header
+      csvData.shift();
+
+      let updateQuery = "INSERT INTO iso_full (name,`alpha-2`,`alpha-3`,`country-code`,`iso_3166-2`,region,`sub-region`,`intermediate-region`,`region-code`,`sub-region-code`,`intermediate-region-code`) VALUES ?";
+      conn.query(updateQuery, [csvData], function(err) {
+          if (err) {
+            console.log(err);
+            console.log("error during data insert");
+          } else {
+            console.log("insert ISO successful");
+          }
+        });
+      insertData();
+      // conn.query("SHOW WARNINGS;", (error, response) => {
+      //     console.log(error || response);
+      //   });
+      // save csvData
+    });
+
+  stream.pipe(csvStream);
+
+  function insertData(){
+    let insertQuery = "INSERT INTO iso (name, `alpha-3`,`country-code`) SELECT name, `alpha-3`,`country-code` FROM iso_full;"
+
+    conn.query(insertQuery, function(err) {
+        if (err) {
+          console.log("error during data insert");
+          console.log(err);
+        } else {
+          console.log("iso data update successful");
+        }
+      });
+  }
+}
 
 //updating database
 function updateDatabase() {
   let stream = fs.createReadStream("owid-covid-data.csv");
+  //temporary table definition
+  let q1 = "CREATE TEMPORARY TABLE world_data_full (iso_code TEXT, continent TEXT, location TEXT, date TEXT, total_cases NUMERIC, new_cases NUMERIC, total_deaths NUMERIC, new_deaths NUMERIC, total_cases_per_million TEXT, new_cases_per_million TEXT, total_deaths_per_million TEXT, new_deaths_per_million TEXT, total_tests TEXT, new_tests TEXT, total_tests_per_thousand TEXT, new_tests_per_thousand TEXT, new_tests_smoothed TEXT, new_tests_smoothed_per_thousand TEXT, tests_units TEXT, stringency_index TEXT, population TEXT, population_density TEXT, median_age TEXT, aged_65_older TEXT, aged_70_older TEXT, gdp_per_capita TEXT, extreme_poverty TEXT, cvd_death_rate TEXT, diabetes_prevalence TEXT, female_smokers TEXT, male_smokers TEXT, handwashing_facilities TEXT, hospital_beds_per_thousand TEXT, life_expectancy TEXT);"
+  //need a better way to insert new data
+  let q2 = "DROP TABLE world_data;"
+  let q3 = "CREATE TABLE world_data (iso_code CHAR(3), Country VARCHAR(100), Confirmed INT, Confirmed_last24h INT, Deaths INT, Deaths_last24h INT, Date TEXT);"
+  conn.query(q1, function(err) {
+      if (err) {
+        console.log("error creating temporary table");
+        console.log(err);
+      }
+    });
+
+  conn.query(q2, function(err) {
+      if (err) {
+        console.log("error dropping table, it probably doesn't exist");
+        console.log(err);
+      }
+    });
+
+  conn.query(q3, function(err) {
+      if (err) {
+        console.log("error creating table");
+        console.log(err);
+      }
+    });
 
   let csvData = [];
   let csvStream = fastcsv
@@ -47,11 +143,13 @@ function updateDatabase() {
       let updateQuery = "INSERT INTO world_data_full (iso_code,continent,location,date,total_cases,new_cases,total_deaths,new_deaths,total_cases_per_million,new_cases_per_million,total_deaths_per_million,new_deaths_per_million,total_tests,new_tests,total_tests_per_thousand,new_tests_per_thousand,new_tests_smoothed,new_tests_smoothed_per_thousand,tests_units,stringency_index,population,population_density,median_age,aged_65_older,aged_70_older,gdp_per_capita,extreme_poverty,cvd_death_rate,diabetes_prevalence,female_smokers,male_smokers,handwashing_facilities,hospital_beds_per_thousand,life_expectancy) VALUES ?";
       conn.query(updateQuery, [csvData], function(err) {
           if (err) {
-            console.log("error during data insert");
+            console.log("error inserting csv data");
+            console.log(err);
           } else {
-            console.log("update successful");
+            console.log("data import successful");
           }
         });
+      insertData();
       // conn.query("SHOW WARNINGS;", (error, response) => {
       //     console.log(error || response);
       //   });
@@ -59,6 +157,32 @@ function updateDatabase() {
     });
 
   stream.pipe(csvStream);
+
+  function insertData() {
+    let insertQuery = "INSERT INTO world_data (iso_code,Country,Confirmed,Confirmed_last24h,Deaths,Deaths_last24h,Date) SELECT iso_code,location,total_cases,new_cases,total_deaths,new_deaths,date FROM world_data_full;"
+
+    conn.query(insertQuery, function(err) {
+        if (err) {
+          console.log("error during data insert");
+          console.log(err);
+        } else {
+          console.log("world data update successful");
+        }
+      });
+  }
+
+
+  // let indexQ = "CREATE INDEX country_code ON world_data (iso_code, Country);"
+  //
+  // conn.query(indexQ, function(err) {
+  //     if (err) {
+  //       console.log("error creating index");
+  //       console.log(err);
+  //     } else {
+  //       console.log("index created");
+  //     }
+  //   });
+
 }
 
 /* Endpoints */
