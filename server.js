@@ -5,6 +5,7 @@ const fastcsv = require("fast-csv");
 let express = require("express");
 let request = require("request");
 let mysql = require("mysql");
+let schedule = require('node-schedule');
 let app = express();
 
 let dbPass = require('./mysqlkey.json');
@@ -25,9 +26,6 @@ conn.connect(function(err) {
 		console.log("Error connecting to database...");
 	} else {
 		console.log("Database successfully connected!");
-    console.log("Updating database...");
-    updateDatabase();
-    instertISO();
 	}
 });
 
@@ -289,4 +287,10 @@ app.use(express.static("./static"));
 
 app.listen(8080, function (){
     console.log("Server listening on http://localhost:8080...")
+});
+
+var j = schedule.scheduleJob('0 0 * * *', function(){
+  console.log("Updating database...");
+  updateDatabase();
+  // instertISO();
 });
