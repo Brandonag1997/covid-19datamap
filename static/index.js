@@ -64,6 +64,10 @@ queue()   // queue function loads all data asynchronously
   .await(dateCallback);
 }
 function dateCallback(error, data, maxData, maxTotals, totals) {
+  // console.log({data});
+  // console.log({maxData});
+  // console.log({maxTotals});
+  // console.log({totals});
   graphData = totals;
   startingValue = new Date(data['First_Day'])
   endingValue = new Date(data['Last_Day'])
@@ -80,9 +84,10 @@ function dateCallback(error, data, maxData, maxTotals, totals) {
 
   buildSlider();
   // buildDropDown();
-  buildLegend();
-  buildGraph('World', selectedVar);
-  setMap();
+  updatePage(selectedVar)
+  // buildLegend();
+  // buildGraph('World', selectedVar);
+  // setMap();
 }
 
 
@@ -222,6 +227,7 @@ function updatePage(newVar) {
   // console.log('reloading page');
 }
 
+//build legend using varibale specified in newVar
 function buildLegend() {
   d3.select("#legend_id").remove();
 
@@ -300,7 +306,7 @@ function buildLegend() {
     .call(yaxis)
 }
 
-function buildGraph(name) {
+function buildGraph() {
 
     // console.log("building graph using " + data);
   var	parseDateG = d3.time.format("%Y-%m").parse;
@@ -516,10 +522,12 @@ queue()   // queue function loads all external data files asynchronously
 
 function processData(error,world,countryData) {
   // console.log("WHO Data", countryData);
+  // console.log({world});
+  // console.log({countryData});
 
 
   var countries = world.objects.countries.geometries;  // path to geometries
-
+  // console.group(countries);
   var emptyCountries = ["Somaliland","Kosovo","N. Cyprus"]  //need to remove non iso countries
   for (var i = 0; i < countries.length; i++)
   {
@@ -530,8 +538,9 @@ function processData(error,world,countryData) {
   }
   // console.log(countries);
   for (var i in countries) {    // for each geometry object
-    data_i=countryData[parseInt(countries[i].id)];
-    // console.log(data_i);
+    // data_i=countryData[parseInt(countries[i].id)];
+    data_i=countryData[countries[i].id];
+    // console.log(parseInt(countries[i].id),countries[i]);
     for (var k in data_i) //for each day that country reported cases
     {
       if(attributeArray.indexOf(data_i[k].date.split("T")[0]) == -1) //too find max date range

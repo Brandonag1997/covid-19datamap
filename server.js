@@ -205,7 +205,6 @@ app.get("/countrydata", function(req, res){
               }
               output[rows[i].id].push({"date": rows[i].Date, "cases": rows[i].Confirmed, "cases_last24": rows[i].Confirmed_last24h, "deaths": rows[i].Deaths, "deaths_last24": rows[i].Deaths_last24h});
             }
-
             res.json(output);
         }
     });
