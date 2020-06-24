@@ -33,8 +33,9 @@ var ramp;
 var formatLegend = d3.format('.0f');
 // var ticks;
 //graph vars
+var graphNum = 1;
 var plot; //the svg for the barchart
-var heightG = 200 + 10 + 10;
+var heightG = 220;
 var widthG = 470;
 var formatDateG = d3.time.format("%b-%Y");
 var tipG; //tooltip for barchart
@@ -353,16 +354,17 @@ function buildGraph(error, totals) {
     .orient("left")
     .ticks(10);
 
-  d3.select("#bar_graph").remove();
+  if (graphNum == 1) {
+    d3.select("#bar_graph").remove();
 
-  plot = d3.select("body")
-    .append("svg")
-      .attr("id","bar_graph")
-      .attr("width", 700)
-      .attr("height", 460)
-      .attr("transform", "translate(0," + 0 + ")")
-      .attr("class", "graph");
-
+    plot = d3.select("body")
+      .append("svg")
+        .attr("id","bar_graph")
+        .attr("width", 700)
+        .attr("height", 460)
+        .attr("transform", "translate(0," + 0 + ")")
+        .attr("class", "graph");
+  }
 
   // console.log(graphData);
   graphData.forEach(function(d) {
@@ -426,7 +428,7 @@ function buildGraph(error, totals) {
 
   plot.append("g")
       .attr("class", "x axisG")
-      .attr("transform", "translate(100," + heightG + ")")
+      .attr("transform", "translate(100," + 270 + ")")
       .call(xAxisG)
     .selectAll("text")
       .style("text-anchor", "end")
@@ -437,7 +439,7 @@ function buildGraph(error, totals) {
   plot.append("g")
       .attr("class", "y axisG")
       .style("stroke-width", "1px")
-      .attr("transform", "translate(100,0)")
+      .attr("transform", "translate(100,50)")
       .call(yAxisG)
     .append("text")
       .attr("transform", "rotate(-90)")
@@ -450,7 +452,7 @@ function buildGraph(error, totals) {
       .data(graphData)
     .enter().append("rect")
       .attr("class", "bar")
-      .attr("transform", "translate(100,0)")
+      .attr("transform", "translate(100,50)")
       .attr("x", function(d) {return xG(d.Date); })
       .attr("width", xG.rangeBand())
       // .attr("width", 4)

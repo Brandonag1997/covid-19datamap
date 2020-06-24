@@ -37,6 +37,8 @@ let download = (url, path, callback) => {
   })
 };
 
+// updateDatabase();
+
 const url = 'https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/owid-covid-data.csv';
 const path = 'owid-covid-data.csv';
 
@@ -313,7 +315,7 @@ app.listen(8080, function (){
     console.log("Server listening on http://localhost:8080...")
 });
 
-var j = schedule.scheduleJob('50 11 * * *', function(){
+var j = schedule.scheduleJob('12 12 * * *', function(){
   console.log("Updating database...");
   download(url, path, () => {
     console.log('data downloaded')
