@@ -37,8 +37,6 @@ let download = (url, path, callback) => {
   })
 };
 
-// updateDatabase();
-
 const url = 'https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/owid-covid-data.csv';
 const path = 'owid-covid-data.csv';
 
@@ -157,7 +155,7 @@ function updateDatabase() {
             console.log("error inserting csv data");
             console.log(err);
           } else {
-            console.log("data import successful");
+            console.log("data import successful...");
           }
         });
       insertData();
@@ -177,7 +175,7 @@ function updateDatabase() {
           console.log("error during data insert");
           console.log(err);
         } else {
-          console.log("world data update successful");
+          console.log("world_data update successful...");
         }
       });
 
@@ -315,11 +313,13 @@ app.listen(8080, function (){
     console.log("Server listening on http://localhost:8080...")
 });
 
-var j = schedule.scheduleJob('12 12 * * *', function(){
+//data downloaded and inserted into database at 7:01 AM
+var j = schedule.scheduleJob('01 07 * * *', function(){
   console.log("Updating database...");
   download(url, path, () => {
-    console.log('data downloaded')
+    console.log('Data downloaded...');
+    updateDatabase();
   })
-  updateDatabase();
+
   // instertISO();
 });
