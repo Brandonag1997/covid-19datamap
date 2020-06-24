@@ -565,8 +565,9 @@ function processData(error,world,countryData) {
     }
 
   }
-  currentAttribute = attributeArray.indexOf(startingValue);
-
+  // currentAttribute = attributeArray.indexOf(startingValue);
+  // console.log(currentAttribute);
+  currentAttribute = 0;
   drawMap(world);
 
 
@@ -641,7 +642,11 @@ function processData(error,world,countryData) {
       // .duration(500*4)
       .style("opacity", 1)
   }
-  playAnimation();
+  // playAnimation();\
+  // currentAttribute = 0;
+  sequenceMap();
+  // console.log(startingValue);
+  // console.log(currentAttribute);
 }
 
 function drawMap(world) {
