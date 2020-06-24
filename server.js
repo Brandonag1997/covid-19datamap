@@ -158,13 +158,22 @@ function updateDatabase() {
 
   function insertData() {
     let insertQuery = "INSERT INTO world_data (iso_code,Country,Confirmed,Confirmed_last24h,Deaths,Deaths_last24h,Date) SELECT iso_code,location,total_cases,new_cases,total_deaths,new_deaths,date FROM world_data_full;"
-
+    let indexQuery = "CREATE INDEX country_code ON world_data (iso_code, Country);"
     conn.query(insertQuery, function(err) {
         if (err) {
           console.log("error during data insert");
           console.log(err);
         } else {
           console.log("world data update successful");
+        }
+      });
+
+    conn.query(indexQuery, function(err) {
+        if (err) {
+          console.log("error adding index");
+          console.log(err);
+        } else {
+          console.log("world_data index successful");
         }
       });
   }
@@ -293,7 +302,7 @@ app.listen(8080, function (){
     console.log("Server listening on http://localhost:8080...")
 });
 
-var j = schedule.scheduleJob('0 0 * * *', function(){
+var j = schedule.scheduleJob('11 0 * * *', function(){
   console.log("Updating database...");
   updateDatabase();
   // instertISO();
