@@ -22,8 +22,9 @@ UNION
 SELECT '156' AS id, DATE(Date) as Date, Confirmed
 FROM china1 WHERE Location='Total';
 
-CREATE TEMPORARY TABLE temp_data (
+CREATE TABLE temp_data2 (
 iso_code TEXT,
+continent TEXT,
 location TEXT,
 date TEXT,
 total_cases NUMERIC,
@@ -38,10 +39,27 @@ total_tests TEXT,
 new_tests TEXT,
 total_tests_per_thousand TEXT,
 new_tests_per_thousand TEXT,
-tests_units TEXT);
+new_tests_smoothed TEXT,
+new_tests_smoothed_per_thousand TEXT,
+tests_units TEXT
+stringency_index TEXT,
+population TEXT,
+population_density TEXT,
+median_age TEXT,
+aged_65_older TEXT,
+aged_70_older TEXT,
+gdp_per_capita	TEXT,
+extreme_poverty TEXT,
+cvd_death_rate TEXT,
+diabetes_prevalence TEXT,
+female_smokers TEXT,
+male_smokers TEXT,
+handwashing_facilities TEXT,
+hospital_beds_per_thousand TEXT
+);
 
 LOAD DATA INFILE 'C:/ProgramData/MySQL/MySQL Server 8.0/Uploads/owid-covid-data.csv'
-INTO TABLE temp_data
+INTO TABLE temp_data2
 FIELDS TERMINATED BY ','
 LINES TERMINATED BY '\n'
 IGNORE 1 ROWS

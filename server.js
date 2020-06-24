@@ -29,6 +29,17 @@ conn.connect(function(err) {
 	}
 });
 
+let download = (url, path, callback) => {
+  request.head(url, (err, res, body) => {
+    request(url)
+      .pipe(fs.createWriteStream(path))
+      .on('close', callback)
+  })
+};
+
+const url = 'https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/owid-covid-data.csv';
+const path = 'owid-covid-data.csv';
+
 function instertISO() {
   let stream = fs.createReadStream("iso-table.csv");
   //temporary table definition
@@ -293,8 +304,11 @@ app.listen(8080, function (){
     console.log("Server listening on http://localhost:8080...")
 });
 
-var j = schedule.scheduleJob('0 0 * * *', function(){
+var j = schedule.scheduleJob('50 11 * * *', function(){
   console.log("Updating database...");
+  download(url, path, () => {
+    console.log('data downloaded')
+  })
   updateDatabase();
   // instertISO();
 });
