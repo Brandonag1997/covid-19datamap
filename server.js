@@ -243,9 +243,14 @@ app.get("/getMax", function(req, res){
 });
 
 app.get("/getTotalByDay", function(req, res){
+    let country_code = req.query.country_code;
+    let statement = "";
     // let statement = "SELECT Date, SUM(Confirmed) AS Confirmed, SUM(Confirmed_last24h) AS Confirmed_last24h, SUM(Deaths) AS Deaths, SUM(Deaths_last24h) AS Deaths_last24h FROM world_data GROUP BY Date ORDER BY Date;"
-    let statement = "SELECT Date, Confirmed, Confirmed_last24h, Deaths, Deaths_last24h FROM world_data WHERE Country='World' GROUP BY Date ORDER BY Date;"
-
+    if (country_code) {
+      statement = "SELECT Date, Confirmed, Confirmed_last24h, Deaths, Deaths_last24h FROM world_data AS W INNER JOIN iso AS I ON I.`alpha-3` = W.iso_code WHERE I.`country-code`=" + `'${country_code}'` + " GROUP BY Date ORDER BY Date;"
+    } else {
+      statement = "SELECT Date, Confirmed, Confirmed_last24h, Deaths, Deaths_last24h FROM world_data WHERE country='World' GROUP BY Date ORDER BY Date;"
+    }
     conn.query(statement,function(err, rows, fields) {
         if (err) {
             console.log('Error during query select...' + err.sqlMessage);

@@ -1,4 +1,5 @@
 //global vars
+var selectedCountry = "Global"
 var newVar = 'Confirmed';
 var projection, path, graticule, svg, attributeArray = [], currentAttribute, playing = false;
 var margin = {
@@ -60,15 +61,15 @@ queue()   // queue function loads all data asynchronously
   .defer(d3.json, "/dateRange") //range of dates we're working with
   .defer(d3.json, "/getMax") //max value in dataset, used to set legend scale
   .defer(d3.json, "/getTotalMax")
-  .defer(d3.json, "/getTotalByDay")
+  // .defer(d3.json, "/getTotalByDay")
   .await(dateCallback);
 }
-function dateCallback(error, data, maxData, maxTotals, totals) {
+function dateCallback(error, data, maxData, maxTotals) {
   // console.log({data});
   // console.log({maxData});
   // console.log({maxTotals});
   // console.log({totals});
-  graphData = totals;
+  // graphData = totals;
   startingValue = new Date(data['First_Day'])
   endingValue = new Date(data['Last_Day'])
   maxConfirmed = maxData['Confirmed']
@@ -222,7 +223,10 @@ function buildDropDown() {
 
 function updatePage(newVar) {
   buildLegend();
-  buildGraph('World', newVar);
+  queue()   // queue function loads all data asynchronously
+    .defer(d3.json, "/getTotalByDay") //data for the whole world
+    .await(buildGraph);
+  // buildGraph('World');
   setMap();
   // console.log('reloading page');
 }
@@ -306,8 +310,8 @@ function buildLegend() {
     .call(yaxis)
 }
 
-function buildGraph() {
-
+function buildGraph(error, totals) {
+  graphData=totals;
     // console.log("building graph using " + data);
   var	parseDateG = d3.time.format("%Y-%m").parse;
 
@@ -418,7 +422,7 @@ function buildGraph() {
     .attr("text-anchor", "middle")
     .style("font-size", "16px")
     // .style("text-decoration", "underline")
-    .text("Global " + selectedVar);
+    .text(selectedCountry + " " + selectedVar);
 
   plot.append("g")
       .attr("class", "x axisG")
@@ -664,6 +668,13 @@ function sequenceMap() {
     })
     .on('mouseleave', function(d){
       tip.hide(d);
+    })
+    .on('click', function(d){
+      selectedCountry = d.properties.name;
+      // console.log(d.ID);
+      queue()   // queue function loads all data asynchronously
+        .defer(d3.json, "/getTotalByDay?country_code="+d.id)
+        .await(buildGraph);
     })
     .transition()  //select all the countries and prepare for a transition to new values
     // .duration(500)  // give it a smooth time period for the transition
