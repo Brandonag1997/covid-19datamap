@@ -309,8 +309,8 @@ app.get("/getTotalMax", function(req, res){
 // Only use static files from static folder
 app.use(express.static("./static"));
 
-app.listen(8080, function (){
-    console.log("Server listening on http://localhost:8080...")
+app.listen(3000, function (){
+    console.log("Server Running on Port 3000...")
 });
 
 //data downloaded and inserted into database at 7:01 AM
