@@ -5,3 +5,4 @@ mysqlkey.json
 package-lock.json
 databaseInstructions.txt
 owid-covid-data.csv
+.well-known

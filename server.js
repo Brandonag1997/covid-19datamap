@@ -7,8 +7,20 @@ let request = require("request");
 let mysql = require("mysql");
 let schedule = require('node-schedule');
 let app = express();
-
+let http = require('http');
+let https = require('https');
 let dbPass = require('./mysqlkey.json');
+
+// Certificate
+let privateKey = fs.readFileSync('/etc/letsencrypt/live/covid-19datamap.com/privkey.pem', 'utf8');
+let certificate = fs.readFileSync('/etc/letsencrypt/live/covid-19datamap.com/cert.pem', 'utf8');
+let ca = fs.readFileSync('/etc/letsencrypt/live/covid-19datamap.com/chain.pem', 'utf8');
+
+let credentials = {
+	key: privateKey,
+	cert: certificate,
+	ca: ca
+};
 
 // Initialize Database
 let conn = mysql.createConnection({
@@ -307,11 +319,22 @@ app.get("/getTotalMax", function(req, res){
 });
 
 // Only use static files from static folder
-app.use(express.static("./static"));
+app.use(express.static("./static", {dotfiles: 'allow'}));
 
-app.listen(3000, function (){
-    console.log("Server Running on Port 3000...")
+let httpServer = http.createServer(app);
+let httpsServer = https.createServer(credentials, app);
+
+httpServer.listen(3000, () => {
+	console.log("Server Running on Port 3000...");
 });
+
+httpsServer.listen(8443, () => {
+	console.log('HTTPS Server Running on port 8443...');
+});
+
+//http.listen(3000, function (){
+//    console.log("Server Running on Port 3000...")
+//});
 
 //data downloaded and inserted into database at 7:01 AM
 var j = schedule.scheduleJob('01 07 * * *', function(){
