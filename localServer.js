@@ -336,8 +336,8 @@ httpServer.listen(3000, () => {
 //    console.log("Server Running on Port 3000...")
 //});
 
-//data downloaded and inserted into database at 7:01 AM
-var j = schedule.scheduleJob('01 07 * * *', function(){
+//data downloaded and inserted into database at 8:01 AM
+var j = schedule.scheduleJob('01 08 * * *', function(){
   console.log("Updating database...");
   download(url, path, () => {
     console.log('Data downloaded...');
