@@ -73,6 +73,7 @@ function dateCallback(error, data, maxData, maxTotals) {
   // graphData = totals;
   startingValue = new Date(data['First_Day'])
   endingValue = new Date(data['Last_Day'])
+  endingValue.setDate(endingValue.getDate() + 1) //for d3 scale
   maxConfirmed = maxData['Confirmed']
   maxConfirmed_last24h = maxData['Confirmed_last24h']
   maxDeaths = maxData['Deaths']
@@ -375,7 +376,11 @@ function buildGraph(error, totals) {
     d.Deaths_last24h = +d.Deaths_last24h;
   });
 
-  xG.domain(graphData.map(function(d) {return d.Date; }));
+  xGdomain = graphData.map(function(d) {return d.Date; });
+  let lastDayG = xGdomain[xGdomain.length - 1];
+  lastDayG.setDate(lastDayG.getDate() + 1);
+  xGdomain.push(lastDayG);
+  xG.domain(xGdomain);
   if (newVar=='Confirmed') {
     yG.domain([0, d3.max(graphData, function(d) {return d.Confirmed; })]);
   }
