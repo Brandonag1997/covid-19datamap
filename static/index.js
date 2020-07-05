@@ -1,6 +1,6 @@
 //global vars
-var selectedCountry = "Global"
-var newVar = 'Confirmed';
+var selectedCountry = "World"
+var newVar = 'Confirmed_last24h';
 var projection, path, graticule, svg, attributeArray = [], currentAttribute, playing = false;
 var margin = {
   top: 150,
@@ -18,10 +18,14 @@ formatDateDB = d3.time.format("%Y-%m-%d")
 var startingValue, endingValue;
 parseDate = d3.time.format("%Y-%m-%d").parse
 var handle, slider, sliderBox, brush, button, svg, x, xaxis
+// data to be loaded in
+let worldDataSaved = null;
+let countryDataSaved = null;
 //dropdown vars
-var dropDownChoices = ["Confirmed Cases", "Confirmed Cases last 24h", "Deaths", "Deaths last 24h"];
-var dropDownVars = ["Confirmed", "Confirmed_last24h", "Deaths", "Deaths_last24h"];
-var selectedVar = "Confirmed";
+var dropDownChoices = ["Daily Confirmed Cases", "Total Confirmed Cases", "Daily Deaths", "Total Deaths"];
+// var dropDownChoices = ["Confirmed Cases", "Confirmed Cases last 24h", "Deaths", "Deaths last 24h"];
+var dropDownVars = ["Confirmed_last24h", "Confirmed", "Deaths_last24h", "Deaths"];
+var selectedVar = "Daily Confirmed Cases";
 var dropDown;
 //legend vars
 var lowColor = '#002fff'; //'#f9f9f9';
@@ -129,7 +133,7 @@ function buildSlider() {
   function onchange() {
     selectedVar = d3.select('select').property('value');
     newVar = dropDownVars[dropDownChoices.indexOf(selectedVar)];
-    selectedCountry = 'Global'
+    selectedCountry = 'World'
     updatePage(newVar);
     // console.log(selectedVar);
     // console.log(newVar);
@@ -315,8 +319,6 @@ function buildLegend() {
 
 function buildGraph(error, totals) {
   graphData=totals;
-  console.log(selectedCountry);
-    // console.log("building graph using " + data);
   var	parseDateG = d3.time.format("%Y-%m").parse;
 
   if (newVar=='Confirmed') {
@@ -522,7 +524,12 @@ svg.append("defs").append("path")   // add the projection path to the svg
     .attr("d", path);
 
 svg.call(tip) //display tooltip when hovering over country
-loadData();  // let's load our data next
+if (worldDataSaved === null) {
+  loadData();  // only query database if data hasn't been loaded yet
+} else {
+  processData(null,worldDataSaved, countryDataSaved)
+}
+
 
 }
 
@@ -537,8 +544,8 @@ function processData(error,world,countryData) {
   // console.log("WHO Data", countryData);
   // console.log({world});
   // console.log({countryData});
-
-
+  worldDataSaved = world;
+  countryDataSaved = countryData;
   var countries = world.objects.countries.geometries;  // path to geometries
   // console.group(countries);
   var emptyCountries = ["Somaliland","Kosovo","N. Cyprus"]  //need to remove non iso countries
