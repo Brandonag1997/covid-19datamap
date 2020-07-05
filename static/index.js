@@ -129,6 +129,7 @@ function buildSlider() {
   function onchange() {
     selectedVar = d3.select('select').property('value');
     newVar = dropDownVars[dropDownChoices.indexOf(selectedVar)];
+    selectedCountry = 'Global'
     updatePage(newVar);
     // console.log(selectedVar);
     // console.log(newVar);
@@ -314,6 +315,7 @@ function buildLegend() {
 
 function buildGraph(error, totals) {
   graphData=totals;
+  console.log(selectedCountry);
     // console.log("building graph using " + data);
   var	parseDateG = d3.time.format("%Y-%m").parse;
 
