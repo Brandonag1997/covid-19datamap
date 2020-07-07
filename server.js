@@ -28,7 +28,7 @@ let conn = mysql.createConnection({
     user: dbPass.user,
     password: dbPass.password,
     port:dbPass.port,
-    database: dbPass.database, // use who_data.sql to create database
+    database: dbPass.database,
     multipleStatements: true
 });
 
@@ -36,6 +36,7 @@ let conn = mysql.createConnection({
 conn.connect(function(err) {
 	if (err) {
 		console.log("Error connecting to database...");
+		console.log(err);
 	} else {
 		console.log("Database successfully connected!");
 	}
@@ -123,14 +124,17 @@ function instertISO() {
 }
 
 //updating database
-function updateDatabase() {
+function updateDatabase(updateDetails) {
   let stream = fs.createReadStream("owid-covid-data.csv");
   //temporary table definition
   let q1 = "CREATE TEMPORARY TABLE world_data_full (iso_code TEXT, continent TEXT, location TEXT, date TEXT, total_cases NUMERIC, new_cases NUMERIC, total_deaths NUMERIC, new_deaths NUMERIC, total_cases_per_million TEXT, new_cases_per_million TEXT, total_deaths_per_million TEXT, new_deaths_per_million TEXT, total_tests TEXT, new_tests TEXT, total_tests_per_thousand TEXT, new_tests_per_thousand TEXT, new_tests_smoothed TEXT, new_tests_smoothed_per_thousand TEXT, tests_units TEXT, stringency_index TEXT, population TEXT, population_density TEXT, median_age TEXT, aged_65_older TEXT, aged_70_older TEXT, gdp_per_capita TEXT, extreme_poverty TEXT, cvd_death_rate TEXT, diabetes_prevalence TEXT, female_smokers TEXT, male_smokers TEXT, handwashing_facilities TEXT, hospital_beds_per_thousand TEXT, life_expectancy TEXT);"
   //need a better way to insert new data
   let q2 = "DROP TABLE world_data;"
   let q3 = "CREATE TABLE world_data (iso_code CHAR(3), Country VARCHAR(100), Confirmed INT, Confirmed_last24h INT, Deaths INT, Deaths_last24h INT, Date TEXT);"
-  conn.query(q1, function(err) {
+	let q4 = "DROP TABLE country_details;"
+  let q5 = "CREATE TABLE country_details (iso_code CHAR(3), population TEXT, population_density TEXT, median_age TEXT, hospital_beds_per_thousand TEXT, life_expectancy TEXT, PRIMARY KEY(iso_code));"
+
+	conn.query(q1, function(err) {
       if (err) {
         console.log("error creating temporary table");
         console.log(err);
@@ -139,14 +143,14 @@ function updateDatabase() {
 
   conn.query(q2, function(err) {
       if (err) {
-        console.log("error dropping table, it probably doesn't exist");
+        console.log("error dropping world_data table, it probably doesn't exist");
         console.log(err);
       }
     });
 
   conn.query(q3, function(err) {
       if (err) {
-        console.log("error creating table");
+        console.log("error creating world_data table");
         console.log(err);
       }
     });
@@ -171,6 +175,22 @@ function updateDatabase() {
           }
         });
       insertData();
+			if (updateDetails==true) {
+        conn.query(q4, function(err) {
+            if (err) {
+              console.log("error dropping country_details table, it probably doesn't exist");
+              console.log(err);
+            }
+          });
+
+        conn.query(q5, function(err) {
+            if (err) {
+              console.log("error creating country_details table");
+              console.log(err);
+            }
+          });
+        updateCountryDetails();
+      }
       // conn.query("SHOW WARNINGS;", (error, response) => {
       //     console.log(error || response);
       //   });
@@ -201,18 +221,17 @@ function updateDatabase() {
       });
   }
 
-
-  // let indexQ = "CREATE INDEX country_code ON world_data (iso_code, Country);"
-  //
-  // conn.query(indexQ, function(err) {
-  //     if (err) {
-  //       console.log("error creating index");
-  //       console.log(err);
-  //     } else {
-  //       console.log("index created");
-  //     }
-  //   });
-
+	function updateCountryDetails() {
+		let insertQuery = "INSERT INTO country_details (iso_code, population, population_density, median_age, hospital_beds_per_thousand, life_expectancy) SELECT W.iso_code, W.population, W.population_density, W.median_age, W.hospital_beds_per_thousand, W.life_expectancy FROM world_data_full as W ON DUPLICATE KEY UPDATE population=W.population, population_density=W.population_density, median_age=W.median_age, hospital_beds_per_thousand=W.hospital_beds_per_thousand, life_expectancy=W.life_expectancy;"
+		conn.query(insertQuery, function(err) {
+				if (err) {
+					console.log("error during data insert for country_details");
+					console.log(err);
+				} else {
+					console.log("country_details update successful...");
+				}
+			});
+	}
 }
 
 /* Endpoints */
@@ -341,7 +360,7 @@ var j = schedule.scheduleJob('01 08 * * *', function(){
   console.log("Updating database...");
   download(url, path, () => {
     console.log('Data downloaded...');
-    updateDatabase();
+    updateDatabase(true);
   })
 
   // instertISO();

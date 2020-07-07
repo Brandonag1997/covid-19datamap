@@ -2,6 +2,7 @@ covid.pem
 covidMap.pem
 node_modules
 mysqlkey.json
+mysqlkeyLocal.json
 package-lock.json
 databaseInstructions.txt
 owid-covid-data.csv

@@ -541,7 +541,7 @@ queue()   // queue function loads all external data files asynchronously
 }
 
 function processData(error,world,countryData) {
-  // console.log("WHO Data", countryData);
+  // console.log("OWID Data", countryData);
   // console.log({world});
   // console.log({countryData});
   worldDataSaved = world;
