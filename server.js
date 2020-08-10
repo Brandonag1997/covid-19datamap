@@ -5,7 +5,7 @@ const fastcsv = require("fast-csv");
 let express = require("express");
 let request = require("request");
 let mysql = require("mysql");
-let schedule = require('node-schedule');
+let schedule = require('node-cron');
 let app = express();
 let http = require('http');
 let https = require('https');
@@ -127,7 +127,7 @@ function instertISO() {
 function updateDatabase(updateDetails) {
   let stream = fs.createReadStream("owid-covid-data.csv");
   //temporary table definition
-  let q1 = "CREATE TEMPORARY TABLE world_data_full (iso_code TEXT, continent TEXT, location TEXT, date TEXT, total_cases NUMERIC, new_cases NUMERIC, total_deaths NUMERIC, new_deaths NUMERIC, total_cases_per_million TEXT, new_cases_per_million TEXT, total_deaths_per_million TEXT, new_deaths_per_million TEXT, total_tests TEXT, new_tests TEXT, total_tests_per_thousand TEXT, new_tests_per_thousand TEXT, new_tests_smoothed TEXT, new_tests_smoothed_per_thousand TEXT, tests_units TEXT, stringency_index TEXT, population TEXT, population_density TEXT, median_age TEXT, aged_65_older TEXT, aged_70_older TEXT, gdp_per_capita TEXT, extreme_poverty TEXT, cvd_death_rate TEXT, diabetes_prevalence TEXT, female_smokers TEXT, male_smokers TEXT, handwashing_facilities TEXT, hospital_beds_per_thousand TEXT, life_expectancy TEXT);"
+  let q1 = "CREATE TEMPORARY TABLE world_data_full (iso_code TEXT, continent TEXT, location TEXT, date TEXT, total_cases NUMERIC, new_cases NUMERIC, total_deaths NUMERIC, new_deaths NUMERIC, total_cases_per_million TEXT, new_cases_per_million TEXT, total_deaths_per_million TEXT, new_deaths_per_million TEXT, new_tests TEXT, total_tests TEXT, total_tests_per_thousand TEXT, new_tests_per_thousand TEXT, new_tests_smoothed TEXT, new_tests_smoothed_per_thousand TEXT, tests_per_case TEXT, positive_rate TEXT, tests_units TEXT, stringency_index TEXT, population TEXT, population_density TEXT, median_age TEXT, aged_65_older TEXT, aged_70_older TEXT, gdp_per_capita TEXT, extreme_poverty TEXT, cardiovasc_death_rate TEXT, diabetes_prevalence TEXT, female_smokers TEXT, male_smokers TEXT, handwashing_facilities TEXT, hospital_beds_per_thousand TEXT, life_expectancy TEXT);"
   //need a better way to insert new data
   let q2 = "DROP TABLE world_data;"
   let q3 = "CREATE TABLE world_data (iso_code CHAR(3), Country VARCHAR(100), Confirmed INT, Confirmed_last24h INT, Deaths INT, Deaths_last24h INT, Date TEXT);"
@@ -165,7 +165,7 @@ function updateDatabase(updateDetails) {
       // remove the first line: header
       csvData.shift();
 
-      let updateQuery = "INSERT INTO world_data_full (iso_code,continent,location,date,total_cases,new_cases,total_deaths,new_deaths,total_cases_per_million,new_cases_per_million,total_deaths_per_million,new_deaths_per_million,total_tests,new_tests,total_tests_per_thousand,new_tests_per_thousand,new_tests_smoothed,new_tests_smoothed_per_thousand,tests_units,stringency_index,population,population_density,median_age,aged_65_older,aged_70_older,gdp_per_capita,extreme_poverty,cvd_death_rate,diabetes_prevalence,female_smokers,male_smokers,handwashing_facilities,hospital_beds_per_thousand,life_expectancy) VALUES ?";
+      let updateQuery = "INSERT INTO world_data_full (iso_code,continent,location,date,total_cases,new_cases,total_deaths,new_deaths,total_cases_per_million,new_cases_per_million,total_deaths_per_million,new_deaths_per_million,new_tests,total_tests,total_tests_per_thousand,new_tests_per_thousand,new_tests_smoothed,new_tests_smoothed_per_thousand,tests_per_case,positive_rate,tests_units,stringency_index,population,population_density,median_age,aged_65_older,aged_70_older,gdp_per_capita,extreme_poverty,cardiovasc_death_rate,diabetes_prevalence,female_smokers,male_smokers,handwashing_facilities,hospital_beds_per_thousand,life_expectancy) VALUES ?";
       conn.query(updateQuery, [csvData], function(err) {
           if (err) {
             console.log("error inserting csv data");
@@ -356,7 +356,7 @@ httpsServer.listen(8443, () => {
 //});
 
 //data downloaded and inserted into database at 8:01 AM
-var j = schedule.scheduleJob('01 08 * * *', function(){
+var j = schedule.schedule('01 12 * * *', function(){
   console.log("Updating database...");
   download(url, path, () => {
     console.log('Data downloaded...');
