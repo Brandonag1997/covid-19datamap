@@ -52,6 +52,8 @@ let download = (url, path, callback) => {
 
 const url = 'https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/owid-covid-data.csv';
 const path = 'owid-covid-data.csv';
+const headerURL = 'https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/owid-covid-codebook.csv'
+const headerPath = 'owid-covid-codebook.csv'
 
 function instertISO() {
   let stream = fs.createReadStream("iso-table.csv");
@@ -123,6 +125,38 @@ function instertISO() {
   }
 }
 
+//get column names
+function findColumns(){
+  let stream = fs.createReadStream("owid-covid-codebook.csv");
+  let q1 = "CREATE TABLE IF NOT EXISTS codebook (column_name TEXT, description TEXT, UNIQUE(column_name));"
+  conn.query(q1, function(err) {
+    if (err){
+      console.log("error creating coodbook table");
+      console.log(err);
+    }
+  })
+
+  let csvData = [];
+  let csvStream = fastcsv
+    .parse()
+    .on("data", function(data) {
+      csvData.push(data);
+    })
+    .on("end", function() {
+      let updateQuery = "INSERT INTO codebook (column_name, description) VALUES ?";
+      conn.query(updateQuery, [csvData], function(err) {
+        if (err) {
+          console.log(err);
+          console.log("error during data insert");
+        } else {
+          console.log("insert codebook successful");
+        }
+      });
+    });
+  stream.pipe(csvStream);
+
+}
+
 //updating database
 function updateDatabase(updateDetails) {
   let stream = fs.createReadStream("owid-covid-data.csv");
@@ -164,6 +198,15 @@ function updateDatabase(updateDetails) {
     .on("end", function() {
       // remove the first line: header
       csvData.shift();
+
+      let statement = "SELECT GROUP_CONCAT(column_name SEPARATOR ', ') FROM codebook;"
+      conn.query(statement,function(err, rows, fields) {
+        if (err){
+          console.log('Error during query select...' + err.sqlMessage);
+        } else {
+          console.log(rows)
+        }
+      })
 
       let updateQuery = "INSERT INTO world_data_full (iso_code, continent, location, date, total_cases, new_cases, new_cases_smoothed, total_deaths, new_deaths, new_deaths_smoothed, total_cases_per_million, new_cases_per_million, new_cases_smoothed_per_million, total_deaths_per_million, new_deaths_per_million, new_deaths_smoothed_per_million,icu_patients,icu_patients_per_million,hosp_patients,hosp_patients_per_million,weekly_icu_admissions,weekly_icu_admissions_per_million,weekly_hosp_admissions,weekly_hosp_admissions_per_million, total_tests, new_tests, total_tests_per_thousand, new_tests_per_thousand, new_tests_smoothed, new_tests_smoothed_per_thousand, tests_per_case, positive_rate, tests_units, stringency_index, population, population_density, median_age, aged_65_older, aged_70_older, gdp_per_capita, extreme_poverty, cardiovasc_death_rate, diabetes_prevalence, female_smokers, male_smokers, handwashing_facilities, hospital_beds_per_thousand, life_expectancy, human_development_index) VALUES ?";
       conn.query(updateQuery, [csvData], function(err) {
@@ -357,6 +400,10 @@ httpsServer.listen(8443, () => {
 
 //data downloaded and inserted into database at 8:01 AM
 var j = schedule.schedule('01 12 * * *', function(){
+  console.log("Getteing column names")
+  download(url, path, () => {
+    findColumns();
+  })
   console.log("Updating database...");
   download(url, path, () => {
     console.log('Data downloaded...');
