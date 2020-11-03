@@ -127,8 +127,9 @@ function instertISO() {
 
 //get column names
 function findColumns(){
-  let stream = fs.createReadStream("owid-covid-codebook.csv");
-  let setupQ = "SET SESSION group_concat_max_len = 100000";
+  console.log("Getteing column names")
+  let stream = fs.createReadStream("owid-covid-codebook.csv"); //file that contains column names and descriptions
+  let setupQ = "SET SESSION group_concat_max_len = 100000"; //increase the max length of group_concat to fit all the column names
   let q1 = "DROP TABLE codebook;"
   let q2 = "CREATE TABLE codebook (column_id int NOT NULL AUTO_INCREMENT PRIMARY KEY, column_name VARCHAR(255), description TEXT, source TEXT);"
   conn.query(setupQ, function(err) {
@@ -151,7 +152,8 @@ function findColumns(){
   })
 
 
-  let csvData = [];
+  let csvData = []; //var to hold codebook csv data
+  //input stream to insert codebook data into codebook table
   let csvStream = fastcsv
     .parse()
     .on("data", function(data) {
@@ -169,8 +171,8 @@ function findColumns(){
         }
       });
     });
-  stream.pipe(csvStream);
-console.log("Updating database...");
+  stream.pipe(csvStream); //pipe the codebook data into the insert query
+  console.log("Downloading data...");
   download(url, path, () => {
     console.log('Data downloaded...');
     updateDatabase(true);
@@ -180,31 +182,27 @@ console.log("Updating database...");
 
 //updating database
 function updateDatabase(updateDetails) {
-//console.log("Getteing column names")
-  //download(url, path, () => {
-    //findColumns();
-  //})
 
-  let outputNames;
+  let outputNames; //var for column names with type as string
   let stream = fs.createReadStream("owid-covid-data.csv");
   //temporary table definition
+  //need to add case statement
   let qNames = `SELECT GROUP_CONCAT(T.column_name SEPARATOR ', ') AS names FROM (SELECT column_id, CONCAT_WS(" ",column_name,'TEXT') AS column_name FROM codebook ORDER BY column_id) AS T;`
-  let q1 = "CREATE TEMPORARY TABLE world_data_full (iso_code TEXT, continent TEXT, location TEXT, date TEXT, total_cases NUMERIC, new_cases NUMERIC, new_cases_smoothed NUMERIC, total_deaths NUMERIC, new_deaths NUMERIC, new_deaths_smoothed NUMERIC, total_cases_per_million TEXT, new_cases_per_million TEXT, new_cases_smoothed_per_million TEXT, total_deaths_per_million TEXT, new_deaths_per_million TEXT, new_deaths_smoothed_per_million TEXT, icu_patients TEXT, icu_patients_per_million  TEXT, hosp_patients TEXT, hosp_patients_per_million TEXT, weekly_icu_admissions TEXT, weekly_icu_admissions_per_million TEXT, weekly_hosp_admissions TEXT, weekly_hosp_admissions_per_million TEXT, total_tests TEXT, new_tests TEXT, total_tests_per_thousand TEXT, new_tests_per_thousand TEXT, new_tests_smoothed TEXT, new_tests_smoothed_per_thousand TEXT, tests_per_case TEXT, positive_rate TEXT, tests_units TEXT, stringency_index TEXT, population TEXT, population_density TEXT, median_age TEXT, aged_65_older TEXT, aged_70_older TEXT, gdp_per_capita TEXT, extreme_poverty TEXT, cardiovasc_death_rate TEXT, diabetes_prevalence TEXT, female_smokers TEXT, male_smokers TEXT, handwashing_facilities TEXT, hospital_beds_per_thousand TEXT, life_expectancy TEXT, human_development_index TEXT);"
-  //need a better way to insert new data
+  //let q1 = "CREATE TEMPORARY TABLE world_data_full (iso_code TEXT, continent TEXT, location TEXT, date TEXT, total_cases NUMERIC, new_cases NUMERIC, new_cases_smoothed NUMERIC, total_deaths NUMERIC, new_deaths NUMERIC, new_deaths_smoothed NUMERIC, total_cases_per_million TEXT, new_cases_per_million TEXT, new_cases_smoothed_per_million TEXT, total_deaths_per_million TEXT, new_deaths_per_million TEXT, new_deaths_smoothed_per_million TEXT, icu_patients TEXT, icu_patients_per_million  TEXT, hosp_patients TEXT, hosp_patients_per_million TEXT, weekly_icu_admissions TEXT, weekly_icu_admissions_per_million TEXT, weekly_hosp_admissions TEXT, weekly_hosp_admissions_per_million TEXT, total_tests TEXT, new_tests TEXT, total_tests_per_thousand TEXT, new_tests_per_thousand TEXT, new_tests_smoothed TEXT, new_tests_smoothed_per_thousand TEXT, tests_per_case TEXT, positive_rate TEXT, tests_units TEXT, stringency_index TEXT, population TEXT, population_density TEXT, median_age TEXT, aged_65_older TEXT, aged_70_older TEXT, gdp_per_capita TEXT, extreme_poverty TEXT, cardiovasc_death_rate TEXT, diabetes_prevalence TEXT, female_smokers TEXT, male_smokers TEXT, handwashing_facilities TEXT, hospital_beds_per_thousand TEXT, life_expectancy TEXT, human_development_index TEXT);"
   let q2 = "DROP TABLE world_data;"
   let q3 = "CREATE TABLE world_data (iso_code CHAR(3), Country VARCHAR(100), Confirmed INT, Confirmed_last24h INT, Deaths INT, Deaths_last24h INT, Date TEXT);"
   let q4 = "DROP TABLE country_details;"
   let q5 = "CREATE TABLE country_details (iso_code CHAR(3), population TEXT, population_density TEXT, median_age TEXT, hospital_beds_per_thousand TEXT, life_expectancy TEXT, PRIMARY KEY(iso_code));"
 
   conn.query(qNames, function(err, rows, fields) {
-      if(err) {
-	console.log("errot getting column names");
-	console.log(err)
+    if(err) {
+	    console.log("errot getting column names");
+	    console.log(err)
       }
-  console.log(rows)
-  outputNames = rows[0].names
-  let q1n ="CREATE TEMPORARY TABLE world_data_full (" + outputNames + ");"
-  conn.query(q1n, function(err) {
+    //console.log(rows)
+    outputNames = rows[0].names
+    let q1 ="CREATE TEMPORARY TABLE world_data_full (" + outputNames + ");"
+    conn.query(q1, function(err) {
       if (err) {
         console.log("error creating temporary table");
         console.log(err);
@@ -212,14 +210,14 @@ function updateDatabase(updateDetails) {
       console.log(q1n);
     });
 
-  conn.query(q2, function(err) {
+    conn.query(q2, function(err) {
       if (err) {
         console.log("error dropping world_data table, it probably doesn't exist");
         console.log(err);
       }
     });
 
-  conn.query(q3, function(err) {
+    conn.query(q3, function(err) {
       if (err) {
         console.log("error creating world_data table");
         console.log(err);
@@ -227,26 +225,23 @@ function updateDatabase(updateDetails) {
     });
   });
   let updateQuery;
-  let csvData = [];
+  let csvData = []; //var to hold world csv data
+  //input stream to insert data into world_data table
   let csvStream = fastcsv
     .parse()
     .on("data", function(data) {
       csvData.push(data);
     })
     .on("end", function() {
-      // remove the first line: header
-      csvData.shift();
+      csvData.shift(); // remove the first line: header
 
-        let statement = "SELECT GROUP_CONCAT(T.column_name SEPARATOR ', ') AS names FROM (SELECT column_id, column_name FROM codebook ORDER BY column_id) AS T;"
-	//let statement = "DESCRIBE codebook;"
-
-	conn.query(statement,function(err, rows, fields) {
+      let statement = "SELECT GROUP_CONCAT(T.column_name SEPARATOR ', ') AS names FROM (SELECT column_id, column_name FROM codebook ORDER BY column_id) AS T;"
+	    conn.query(statement,function(err, rows, fields) {
         if (err){
           console.log('Error during query select...' + err.sqlMessage);
         } else {
           let output = rows[0].names;
-	  //console.log(output)
-	  updateQuery = "INSERT INTO world_data_full (" + output + ") VALUES ?"
+	        updateQuery = "INSERT INTO world_data_full (" + output + ") VALUES ?"
         }
       //})
       //console.log(output)
@@ -262,6 +257,7 @@ function updateDatabase(updateDetails) {
           }
         });
       insertData();
+      //update detailed data about each country
 			if (updateDetails==true) {
         conn.query(q4, function(err) {
             if (err) {
@@ -282,7 +278,7 @@ function updateDatabase(updateDetails) {
       //     console.log(error || response);
       //   });
       // save csvData
-	})
+	    })
     });
 
   stream.pipe(csvStream);
@@ -439,21 +435,11 @@ httpsServer.listen(8443, () => {
 	console.log('HTTPS Server Running on port 8443...');
 });
 
-//http.listen(3000, function (){
-//    console.log("Server Running on Port 3000...")
-//});
-
 //data downloaded and inserted into database at 8:01 AM
 var j = schedule.schedule('01 12 * * *', function(){
-  console.log("Getteing column names")
-  download(url, path, () => {
+  console.log("Updating database...");
+  download(headerURL, headerPath, () => {
     findColumns();
   })
-  //console.log("Updating database...");
-  //download(url, path, () => {
-    //console.log('Data downloaded...');
-    //updateDatabase(true);
-  //})
-
   // instertISO();
 });
