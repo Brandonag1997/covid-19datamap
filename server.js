@@ -444,7 +444,7 @@ httpsServer.listen(8443, () => {
 //});
 
 //data downloaded and inserted into database at 8:01 AM
-//var j = schedule.schedule('01 12 * * *', function(){
+var j = schedule.schedule('01 12 * * *', function(){
   console.log("Getteing column names")
   download(url, path, () => {
     findColumns();
@@ -456,4 +456,4 @@ httpsServer.listen(8443, () => {
   //})
 
   // instertISO();
-//});
+});
