@@ -6,4 +6,5 @@ mysqlkeyLocal.json
 package-lock.json
 databaseInstructions.txt
 owid-covid-data.csv
+owid-covid-codebook.csv
 .well-known
