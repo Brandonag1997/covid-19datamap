@@ -187,8 +187,7 @@ function updateDatabase(updateDetails) {
   let stream = fs.createReadStream("owid-covid-data.csv");
   //temporary table definition
   //need to add case statement
-  let qNames1 = `SELECT GROUP_CONCAT(T.column_name SEPARATOR ', ') AS names FROM ((SELECT column_id, column_name CASE WHEN column_name = 'total_cases' THEN 'NUMERIC' WHEN column_name = 'new_cases' THEN 'NUMERIC' WHEN column_name = 'new_cases_smoothed' THEN 'NUMERIC' WHEN column_name = 'total_deaths' THEN 'NUMERIC' WHEN column_name = 'new_deaths' THEN 'NUMERIC' WHEN column_name = 'new_deaths_smoothed' THEN 'NUMERIC' WHEN column_name = 'new_cases_smoothed' THEN 'NUMERIC' WHEN column_name = 'total_deaths' THEN 'NUMERIC' ELSE 'TEXT' END AS TYPE FROM codebook ORDER BY column_id) AS F) AS T;`
-  let qNames = `SELECT GROUP_CONCAT(T.column_name SEPARATOR ', ') AS names FROM (SELECT column_id, CONCAT_WS(" ",column_name,'TEXT') AS column_name FROM codebook ORDER BY column_id) AS T;`
+  let qNames = `SELECT GROUP_CONCAT(T.column_name SEPARATOR ', ') AS names FROM (SELECT CONCAT_WS(" ",F.column_name,F.TYPE) AS column_name FROM (SELECT column_id, column_name, CASE column_name WHEN 'total_cases' THEN 'NUMERIC' WHEN 'new_cases' THEN 'NUMERIC' WHEN 'new_cases_smoothed' THEN 'NUMERIC' WHEN 'total_deaths' THEN 'NUMERIC' WHEN 'new_deaths' THEN 'NUMERIC' WHEN 'new_deaths_smoothed' THEN 'NUMERIC' WHEN 'new_cases_smoothed' THEN 'NUMERIC' WHEN 'total_deaths' THEN 'NUMERIC' ELSE 'TEXT' END AS TYPE FROM codebook ORDER BY column_id) AS F) AS T;`
   //let q1 = "CREATE TEMPORARY TABLE world_data_full (iso_code TEXT, continent TEXT, location TEXT, date TEXT, total_cases NUMERIC, new_cases NUMERIC, new_cases_smoothed NUMERIC, total_deaths NUMERIC, new_deaths NUMERIC, new_deaths_smoothed NUMERIC, total_cases_per_million TEXT, new_cases_per_million TEXT, new_cases_smoothed_per_million TEXT, total_deaths_per_million TEXT, new_deaths_per_million TEXT, new_deaths_smoothed_per_million TEXT, icu_patients TEXT, icu_patients_per_million  TEXT, hosp_patients TEXT, hosp_patients_per_million TEXT, weekly_icu_admissions TEXT, weekly_icu_admissions_per_million TEXT, weekly_hosp_admissions TEXT, weekly_hosp_admissions_per_million TEXT, total_tests TEXT, new_tests TEXT, total_tests_per_thousand TEXT, new_tests_per_thousand TEXT, new_tests_smoothed TEXT, new_tests_smoothed_per_thousand TEXT, tests_per_case TEXT, positive_rate TEXT, tests_units TEXT, stringency_index TEXT, population TEXT, population_density TEXT, median_age TEXT, aged_65_older TEXT, aged_70_older TEXT, gdp_per_capita TEXT, extreme_poverty TEXT, cardiovasc_death_rate TEXT, diabetes_prevalence TEXT, female_smokers TEXT, male_smokers TEXT, handwashing_facilities TEXT, hospital_beds_per_thousand TEXT, life_expectancy TEXT, human_development_index TEXT);"
   let q2 = "DROP TABLE world_data;"
   let q3 = "CREATE TABLE world_data (iso_code CHAR(3), Country VARCHAR(100), Confirmed INT, Confirmed_last24h INT, Deaths INT, Deaths_last24h INT, Date TEXT);"
@@ -208,7 +207,7 @@ function updateDatabase(updateDetails) {
         console.log("error creating temporary table");
         console.log(err);
       }
-      console.log(q1);
+      //console.log(q1);
     });
 
     conn.query(q2, function(err) {
