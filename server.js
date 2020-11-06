@@ -372,7 +372,7 @@ app.get("/dateRange", function(req, res){
 });
 
 app.get("/getMax", function(req, res){
-    let statement = "SELECT MAX(Confirmed) AS Confirmed, MAX(Confirmed_last24h) AS Confirmed_last24h, MAX(Deaths) AS Deaths, MAX(Deaths_last24h) AS Deaths_last24h FROM world_data;"
+    let statement = "SELECT MAX(Confirmed) AS Confirmed, MAX(Confirmed_last24h) AS Confirmed_last24h, MAX(Deaths) AS Deaths, MAX(Deaths_last24h) AS Deaths_last24h FROM world_data WHERE Country!='World';"
 
     conn.query(statement,function(err, rows, fields) {
         if (err) {
@@ -415,7 +415,7 @@ app.get("/getTotalByDay", function(req, res){
 });
 
 app.get("/getTotalMax", function(req, res){
-    let statement = "SELECT MAX(Confirmed) AS Confirmed, MAX(Confirmed_last24h) AS Confirmed_last24h, MAX(Deaths) AS Deaths, MAX(Deaths_last24h) AS Deaths_last24h FROM (SELECT Date, Confirmed, Confirmed_last24h, Deaths, Deaths_last24h FROM world_data WHERE Country='World' GROUP BY Date) AS S;"
+    let statement = "SELECT MAX(Confirmed) AS Confirmed, MAX(Confirmed_last24h) AS Confirmed_last24h, MAX(Deaths) AS Deaths, MAX(Deaths_last24h) AS Deaths_last24h FROM world_data;"
 
     conn.query(statement,function(err, rows, fields) {
         if (err) {

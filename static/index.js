@@ -64,8 +64,8 @@ var firstDay, lastDay;
 function getScaleData(){
 queue()   // queue function loads all data asynchronously
   .defer(d3.json, "/dateRange") //range of dates we're working with
-  .defer(d3.json, "/getMax") //max value in dataset, used to set legend scale
-  .defer(d3.json, "/getTotalMax")
+  .defer(d3.json, "/getMax") //max value in dataset excluding world total, used to set legend scale
+  .defer(d3.json, "/getTotalMax") //max world total used to set graph legend
   // .defer(d3.json, "/getTotalByDay")
   .await(dateCallback);
 }
