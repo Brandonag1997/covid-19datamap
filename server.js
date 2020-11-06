@@ -1,3 +1,5 @@
+let runLocal = false;
+
 var fs = require('fs');
 const fastcsv = require("fast-csv");
 
@@ -11,16 +13,24 @@ let http = require('http');
 let https = require('https');
 let dbPass = require('./mysqlkey.json');
 
-// Certificate
-let privateKey = fs.readFileSync('/etc/letsencrypt/live/covid-19datamap.com/privkey.pem', 'utf8');
-let certificate = fs.readFileSync('/etc/letsencrypt/live/covid-19datamap.com/cert.pem', 'utf8');
-let ca = fs.readFileSync('/etc/letsencrypt/live/covid-19datamap.com/chain.pem', 'utf8');
+// varaiables for https
+let privateKey;
+let certificate;
+let ca;
+let credentials;
+let httpsServer
 
-let credentials = {
-	key: privateKey,
-	cert: certificate,
-	ca: ca
-};
+if (runLocal ==false){
+  privateKey = fs.readFileSync('/etc/letsencrypt/live/covid-19datamap.com/privkey.pem', 'utf8');
+  ertificate = fs.readFileSync('/etc/letsencrypt/live/covid-19datamap.com/cert.pem', 'utf8');
+  ca = fs.readFileSync('/etc/letsencrypt/live/covid-19datamap.com/chain.pem', 'utf8');
+
+  credentials = {
+    key: privateKey,
+    cert: certificate,
+    ca: ca
+  };
+}
 
 // Initialize Database
 let conn = mysql.createConnection({
@@ -425,15 +435,16 @@ app.get("/getTotalMax", function(req, res){
 app.use(express.static("./static", {dotfiles: 'allow'}));
 
 let httpServer = http.createServer(app);
-let httpsServer = https.createServer(credentials, app);
-
 httpServer.listen(3000, () => {
 	console.log("Server Running on Port 3000...");
 });
 
-httpsServer.listen(8443, () => {
-	console.log('HTTPS Server Running on port 8443...');
-});
+if (runLocal==false){
+  httpsServer = https.createServer(credentials, app);
+  httpsServer.listen(8443, () => {
+    console.log('HTTPS Server Running on port 8443...');
+  });
+}
 
 //data downloaded and inserted into database at 8:01 AM
 var j = schedule.schedule('01 12 * * *', function(){
@@ -441,5 +452,5 @@ var j = schedule.schedule('01 12 * * *', function(){
   download(headerURL, headerPath, () => {
     findColumns();
   })
-  // instertISO();
+  //instertISO();
 });
