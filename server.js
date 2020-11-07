@@ -1,5 +1,3 @@
-let runLocal = false;
-
 var fs = require('fs');
 const fastcsv = require("fast-csv");
 
@@ -14,26 +12,18 @@ let https = require('https');
 let dbPass = require('./mysqlkey.json');
 
 // global variable to store value for slow query
-global.countryData = 'empty';
+var countryData = {};
 
 // varaiables for https
-let privateKey;
-let certificate;
-let ca;
-let credentials;
-let httpsServer
+let privateKey = fs.readFileSync('/etc/letsencrypt/live/covid-19datamap.com/privkey.pem', 'utf8');
+let certificate = fs.readFileSync('/etc/letsencrypt/live/covid-19datamap.com/cert.pem', 'utf8');
+let ca = fs.readFileSync('/etc/letsencrypt/live/covid-19datamap.com/chain.pem', 'utf8');
 
-if (runLocal ==false){
-  privateKey = fs.readFileSync('/etc/letsencrypt/live/covid-19datamap.com/privkey.pem', 'utf8');
-  ertificate = fs.readFileSync('/etc/letsencrypt/live/covid-19datamap.com/cert.pem', 'utf8');
-  ca = fs.readFileSync('/etc/letsencrypt/live/covid-19datamap.com/chain.pem', 'utf8');
-
-  credentials = {
-    key: privateKey,
-    cert: certificate,
-    ca: ca
-  };
-}
+let credentials = {
+   	key: privateKey,
+    	cert: certificate,
+    	ca: ca
+    };
 
 // Initialize Database
 let conn = mysql.createConnection({
@@ -438,12 +428,11 @@ httpServer.listen(3000, () => {
 	console.log("Server Running on Port 3000...");
 });
 
-if (runLocal==false){
-  httpsServer = https.createServer(credentials, app);
-  httpsServer.listen(8443, () => {
+let httpsServer = https.createServer(credentials, app);
+httpsServer.listen(8443, () => {
     console.log('HTTPS Server Running on port 8443...');
-  });
-}
+});
+
 
 getCountryData();
 //data downloaded and inserted into database at 8:01 AM
