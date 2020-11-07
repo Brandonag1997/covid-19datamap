@@ -13,6 +13,9 @@ let http = require('http');
 let https = require('https');
 let dbPass = require('./mysqlkey.json');
 
+// global variable to store value for slow query
+global.countryData = 'empty';
+
 // varaiables for https
 let privateKey;
 let certificate;
@@ -254,10 +257,6 @@ function updateDatabase(updateDetails) {
 	        updateQuery = "INSERT INTO world_data_full (" + output + ") VALUES ?"
         }
       //})
-      //console.log(output)
-      //let updateQuery1 = "INSERT INTO world_data (" + output + ") VALUES ?"
-      //console.log(updateQuery)
-      //let updateQuery1 = "INSERT INTO world_data_full (iso_code, continent, location, date, total_cases, new_cases, new_cases_smoothed, total_deaths, new_deaths, new_deaths_smoothed, total_cases_per_million, new_cases_per_million, new_cases_smoothed_per_million, total_deaths_per_million, new_deaths_per_million, new_deaths_smoothed_per_million,icu_patients,icu_patients_per_million,hosp_patients,hosp_patients_per_million,weekly_icu_admissions,weekly_icu_admissions_per_million,weekly_hosp_admissions,weekly_hosp_admissions_per_million, total_tests, new_tests, total_tests_per_thousand, new_tests_per_thousand, new_tests_smoothed, new_tests_smoothed_per_thousand, tests_per_case, positive_rate, tests_units, stringency_index, population, population_density, median_age, aged_65_older, aged_70_older, gdp_per_capita, extreme_poverty, cardiovasc_death_rate, diabetes_prevalence, female_smokers, male_smokers, handwashing_facilities, hospital_beds_per_thousand, life_expectancy, human_development_index) VALUES ?";
       conn.query(updateQuery, [csvData], function(err) {
           if (err) {
             console.log("error inserting csv data");
@@ -283,6 +282,7 @@ function updateDatabase(updateDetails) {
             }
           });
         updateCountryDetails();
+        getCountryData();
       }
       // conn.query("SHOW WARNINGS;", (error, response) => {
       //     console.log(error || response);
@@ -325,34 +325,34 @@ function updateDatabase(updateDetails) {
 					console.log("country_details update successful...");
 				}
 			});
-	}
+  }
+  
+  
 }
 
+function getCountryData() {
+  let statement = "SELECT DISTINCT id_date.id AS id, DATE(IFNULL(W.Date,id_date.Date)) AS Date, IFNULL(W.Confirmed,0) AS Confirmed, IFNULL(W.Confirmed_last24h,0) AS Confirmed_last24h, IFNULL(W.Deaths,0) AS Deaths, IFNULL(W.Deaths_last24h,0) AS Deaths_last24h FROM world_data AS W RIGHT JOIN (SELECT I1.`country-code` AS ID, T1.Date AS Date, I1.`alpha-3` AS Name FROM (SELECT DISTINCT i.`alpha-3` AS id, w.Date as Date FROM iso AS i, world_data AS w) AS T1 INNER JOIN iso AS I1 ON T1.id = I1.`alpha-3`) AS id_date ON W.iso_code = id_date.Name AND W.Date = id_date.Date;"
+
+  conn.query(statement,function(err, rows, fields) {
+      if (err) {
+          console.log('Error during query select...' + err.sqlMessage);
+      } else {
+        let output = {};
+        // console.log(rows);
+        for(let i = 0; i < rows.length; i++){
+          if (!(rows[i].id in output)) {
+            output[rows[i].id] = [];
+          }
+          output[rows[i].id].push({"date": rows[i].Date, "cases": rows[i].Confirmed, "cases_last24": rows[i].Confirmed_last24h, "deaths": rows[i].Deaths, "deaths_last24": rows[i].Deaths_last24h});
+        }
+        countryData = output;
+        console.log('country data cached');
+      }
+  });
+}
 /* Endpoints */
 app.get("/countrydata", function(req, res){
-    // let statement = "SELECT I.`alpha-3` AS id, W.Date AS Date, W.Confirmed AS Confirmed FROM world AS W INNER JOIN iso as I ON W.Country = I.who_name GROUP BY I.`alpha-3`,W.Date,W.Confirmed;";
-    // let statement = "SELECT DISTINCT id_date.id AS id, IFNULL(W.Date,id_date.Date) AS Date, IFNULL(W.Confirmed,0) AS Confirmed FROM world AS W RIGHT JOIN (SELECT T1.id AS ID, T1.Date AS Date, I1.who_name AS Name  FROM (SELECT DISTINCT i.`alpha-3` AS id, W.Date as Date FROM iso AS i, world AS w) AS T1 INNER JOIN iso AS I1 ON T1.id = I1.`alpha-3`) AS id_date ON W.Country = id_date.Name AND W.Date = id_date.Date UNION SELECT 'CHN' AS id, Date, Confirmed FROM china WHERE Location='Total';";
-    // let statement = "SELECT DISTINCT id_date.id AS id, DATE(IFNULL(W.Date,id_date.Date)) AS Date, IFNULL(W.Confirmed,0) AS Confirmed FROM world_data AS W RIGHT JOIN (SELECT I1.`country-code` AS ID, T1.Date AS Date, I1.who_name AS Name  FROM (SELECT DISTINCT i.`alpha-3` AS id, W.Date as Date FROM iso AS i, world_data AS w) AS T1 INNER JOIN iso AS I1 ON T1.id = I1.`alpha-3`) AS id_date ON W.Country = id_date.Name AND W.Date = id_date.Date;";
-    // let statement = "SELECT DISTINCT id_date.id AS id, DATE(IFNULL(W.Date,id_date.Date)) AS Date, IFNULL(W.Confirmed,0) AS Confirmed FROM world_data AS W RIGHT JOIN (SELECT I1.`country-code` AS ID, T1.Date AS Date, I1.`alpha-3` AS Name FROM (SELECT DISTINCT i.`alpha-3` AS id, W.Date as Date FROM iso AS i, world_data AS w) AS T1 INNER JOIN iso AS I1 ON T1.id = I1.`alpha-3`) AS id_date ON W.iso_code = id_date.Name AND W.Date = id_date.Date;"
-    let statement = "SELECT DISTINCT id_date.id AS id, DATE(IFNULL(W.Date,id_date.Date)) AS Date, IFNULL(W.Confirmed,0) AS Confirmed, IFNULL(W.Confirmed_last24h,0) AS Confirmed_last24h, IFNULL(W.Deaths,0) AS Deaths, IFNULL(W.Deaths_last24h,0) AS Deaths_last24h FROM world_data AS W RIGHT JOIN (SELECT I1.`country-code` AS ID, T1.Date AS Date, I1.`alpha-3` AS Name FROM (SELECT DISTINCT i.`alpha-3` AS id, w.Date as Date FROM iso AS i, world_data AS w) AS T1 INNER JOIN iso AS I1 ON T1.id = I1.`alpha-3`) AS id_date ON W.iso_code = id_date.Name AND W.Date = id_date.Date;"
-
-    conn.query(statement,function(err, rows, fields) {
-        if (err) {
-            console.log('Error during query select...' + err.sqlMessage);
-            res.json({"failed":"countrydata"}); res.status(500);
-
-        } else {
-            let output = {};
-            // console.log(rows);
-            for(let i = 0; i < rows.length; i++){
-              if (!(rows[i].id in output)) {
-                output[rows[i].id] = [];
-              }
-              output[rows[i].id].push({"date": rows[i].Date, "cases": rows[i].Confirmed, "cases_last24": rows[i].Confirmed_last24h, "deaths": rows[i].Deaths, "deaths_last24": rows[i].Deaths_last24h});
-            }
-            res.json(output);
-        }
-    });
+  res.json(countryData);
 });
 
 app.get("/dateRange", function(req, res){
@@ -390,7 +390,6 @@ app.get("/getMax", function(req, res){
 app.get("/getTotalByDay", function(req, res){
     let country_code = req.query.country_code;
     let statement = "";
-    // let statement = "SELECT Date, SUM(Confirmed) AS Confirmed, SUM(Confirmed_last24h) AS Confirmed_last24h, SUM(Deaths) AS Deaths, SUM(Deaths_last24h) AS Deaths_last24h FROM world_data GROUP BY Date ORDER BY Date;"
     if (country_code) {
       statement = "SELECT Date, Confirmed, Confirmed_last24h, Deaths, Deaths_last24h FROM world_data AS W INNER JOIN iso AS I ON I.`alpha-3` = W.iso_code WHERE I.`country-code`=" + `'${country_code}'` + " GROUP BY Date ORDER BY Date;"
     } else {
@@ -446,6 +445,7 @@ if (runLocal==false){
   });
 }
 
+getCountryData();
 //data downloaded and inserted into database at 8:01 AM
 var j = schedule.schedule('01 12 * * *', function(){
   console.log("Updating database...");
