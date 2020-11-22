@@ -90,7 +90,6 @@ function dateCallback(error, data, maxData, maxTotals) {
   ramp = d3.scale.log().clamp(true).domain([1,maxConfirmed]).range([lowColor,highColor]).nice()
 
   buildSlider();
-  // buildDropDown();
   updatePage(selectedVar)
   // buildLegend();
   // buildGraph('World', selectedVar);
@@ -108,8 +107,8 @@ function buildSlider() {
   svg1 = d3.select("body")
     .append("svg")
       .attr("id","map_element")
-      .attr("width", width + margin.left + margin.right)
-      .attr("height", height + margin.top + margin.bottom);
+      .attr("width", 900)
+      .attr("height", height + margin.top + margin.bottom + 100);
 
   svg1.append("text")
     .attr("id","map_title")
@@ -117,6 +116,12 @@ function buildSlider() {
     .attr("y", 30)
     .style("font-size", "36px")
     .text("COVID-19 Map")
+
+  // svg1.append("svg")
+  //   .attr("id","svgBox")
+  //   .attr("width", width + margin.left + margin.right + 100)
+  //   .attr("height", 150);
+
 
   dropDown = d3.select("body")
     .append("select")
@@ -140,11 +145,11 @@ function buildSlider() {
     }
 
   svg = svg1.append("g")
+    .attr("height", 500)
+    .attr("width", 900)
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-  button = d3.select("body").append("button")
-    .attr("class", "play")
-    .text("Play")
+  
 
   ////slider code
   //brush for slider
@@ -152,16 +157,29 @@ function buildSlider() {
     .x(x)
     .extent([startingValue, startingValue])
 
-  var svgBox = d3.select("body")
-      .append("svg")
-        .attr("width", width + margin.left + margin.right + 100)
-        .attr("height", 150);
+  // var svgBox = d3.select("body")
+  //     .append("svg")
+  //       // .attr("x",-200)
+  //       // .attr("y", -200)
+  //       // .attr("transform", "translate(" + -100 + ","
+  //       //                                 + -100 + ")")
+  //       .attr("width", width + margin.left + margin.right + 100)
+  //       .attr("height", 150);
 
-  sliderBox = svgBox
+  //sliderBox = svgBox
+  backGroundBox = svg1
+      .append("rect")
+      .attr("transform", "translate(" + 0 + ","
+                                        + 550 + ")")
+      .attr("height", 200)
+      .attr("width", sliderPosition.width + 200)
+      .attr("fill", "white");
+
+  sliderBox = svg1
       .append("g")
         .attr("class", "slider-box")
         .attr("transform", "translate(" + 100 + ","
-                                        + 40 + ")")
+                                        + 590 + ")")
         .attr("height", 200)
         .attr("width", sliderPosition.width + 200)
     .call(d3.svg.axis()
@@ -191,41 +209,15 @@ function buildSlider() {
 
   handle.append("path")
       .attr("transform", "translate(0," + 0 + ")")
-      // .attr("d", "M 0 -20 V 20")
-      // .attr("transform", "translate(0," + sliderPosition.height / 2 + ")")
       .attr("d", "M 0 -10 V 10")
 
   handle.append('text')
     .text(formatDate(startingValue))
     .attr("transform", "translate(" + (-18) + " ," + (- 15) + ")");
-    // .attr("transform", "translate(" + (-18) + " ," + (sliderPosition.height / 2 - 25) + ")");
-  // dropDown = svgBox.append("g")
-  //   .attr("width", 20)
-  //   .attr("height", 20);
 
-}
-
-function buildDropDown() {
-  // dropDown
-  //   .append("select")
-  //   .attr("class", "var-list")
-  //   .attr("y", 100)
-  //   .on('change', onchange);
-
-
-  // var options = dropDown.selectAll("option")
-  //  .data(dropDownChoices)
-  //  .enter()
-  //  .append("option")
-  //   .text(function (d) {return d;});
-  //
-  // function onchange() {
-  //   selectedVar = d3.select('select').property('value');
-  //   newVar = dropDownVars[dropDownChoices.indexOf(selectedVar)];
-  //   updatePage(newVar);
-  //   // console.log(selectedVar);
-  //   // console.log(newVar);
-  // }
+  button = d3.select("body").append("button")
+    .attr("class", "play")
+    .text("Play")
 }
 
 function updatePage(newVar) {
