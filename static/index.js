@@ -625,10 +625,11 @@ function processData(error,world,countryData) {
   button.on("click", playAnimation);
 
   function playAnimation(){
-    button.transition()
-      .delay(500*4*1000)
-      .duration(500*4)
-      .style("opacity", 1)
+    button
+      // .transition()
+      // // .delay(500*4*1000)
+      // .duration(50)
+      .style("opacity", 0)
 
     slider
       .call(brush.extent([startingValue, startingValue])) //new Date('2020-03-01'), new Date('2020-03-01')
@@ -636,7 +637,7 @@ function processData(error,world,countryData) {
     .transition()
       .ease("linear")
       // .delay(500*4)
-      .duration(10000)
+      .duration(30000)
       .call(brush.extent([endingValue, endingValue])) //new Date('2020-03-31'), new Date('2020-03-31')
       .call(brush.event)
     .transition()
@@ -644,10 +645,11 @@ function processData(error,world,countryData) {
   }
 
   function endAnimation(){
-    button.transition()
-      // .delay(10500*4)
-      .duration(10000)
-      // .duration(500*4)
+    button
+      // .transition()
+      // // .delay(10500*4)
+      // .duration(10000)
+      // // .duration(500*4)
       .style("opacity", 1)
   }
   // playAnimation();\
@@ -690,7 +692,7 @@ function sequenceMap() {
         .await(buildGraph);
     })
     .transition()  //select all the countries and prepare for a transition to new values
-    // .duration(500)  // give it a smooth time period for the transition
+    .duration(100)  // give it a smooth time period for the transition
     // .attr('fill-opacity', function(d) {
     //   return getColor(d.properties[attributeArray[currentAttribute]], dataRange);  // the end color value
     // })
