@@ -40,7 +40,7 @@ var formatLegend = d3.format('.0f');
 var graphNum = 1;
 var plot; //the svg for the barchart
 var heightG = 220;
-var widthG = 470;
+var widthG = 550;
 var formatDateG = d3.time.format("%b-%Y");
 var tipG; //tooltip for barchart
 var formatDateToolTip = d3.time.format("%d-%b-%Y");
