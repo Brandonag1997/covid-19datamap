@@ -8,3 +8,5 @@ databaseInstructions.txt
 owid-covid-data.csv
 owid-covid-codebook.csv
 .well-known
+localServer.js
+index2.js

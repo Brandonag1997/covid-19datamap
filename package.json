@@ -18,7 +18,7 @@
   "homepage": "",
   "dependencies": {
     "express": "^4.17.1",
-    "fast-csv": "^4.3.1",
+    "fast-csv": "^4.3.6",
     "forever": "^3.0.0",
     "https": "^1.0.0",
     "mysql": "^2.18.1",
