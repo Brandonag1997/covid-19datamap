@@ -420,6 +420,31 @@ app.get("/getTotalMax", function(req, res){
     });
 });
 
+app.get("/getDetails", function(req, res){
+  let country_code = req.query.country_code;
+  let statement = "";
+  if (country_code) {
+    statement = "SELECT population FROM country_details AS CD INNER JOIN iso AS I ON I.`alpha-3` = CD.iso_code WHERE I.`country-code`=" + `'${country_code}'` + ";"
+  } else {
+    statement = "SELECT 7762000000 as population;" //need to add better way to get world population
+    // statement = "SELECT Date, Confirmed, Confirmed_last24h, Deaths, Deaths_last24h FROM world_data WHERE country='World' GROUP BY Date ORDER BY Date;"
+  }
+  conn.query(statement,function(err, rows, fields) {
+      if (err) {
+          console.log('Error during query select...' + err.sqlMessage);
+          res.json({"failed":"getDetails"}); res.status(500);
+
+      } else {
+        let output = [];
+        for(let i = 0; i < rows.length; i++){
+          output.push({"population": rows[i].population});
+        }
+        res.json(output);
+
+      }
+  });
+});
+
 // Only use static files from static folder
 app.use(express.static("./static", {dotfiles: 'allow'}));
 

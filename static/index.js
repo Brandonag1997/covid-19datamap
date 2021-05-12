@@ -70,17 +70,10 @@ queue()   // queue function loads all data asynchronously
   .await(dateCallback);
 }
 function dateCallback(error, data, maxData, maxTotals) {
-  // console.log({data});
-  // console.log({maxData});
-  // console.log({maxTotals});
-  // console.log({totals});
-  // graphData = totals;
+
   startingValue = new Date(data['First_Day'].replace(/-/g, '\/').replace(/T.+/, ''))
-  // console.log(startingValue);
   endingValue = new Date(data['Last_Day'].replace(/-/g, '\/').replace(/T.+/, ''))
-  // console.log(endingValue);
   endingValue.setDate(endingValue.getDate() - 1) //for d3 scale
-  // console.log(endingValue);
   maxConfirmed = maxData['Confirmed']
   maxConfirmed_last24h = maxData['Confirmed_last24h']
   maxDeaths = maxData['Deaths']
@@ -143,8 +136,6 @@ function buildSlider() {
     newVar = dropDownVars[dropDownChoices.indexOf(selectedVar)];
     selectedCountry = 'World'
     updatePage(newVar);
-    // console.log(selectedVar);
-    // console.log(newVar);
     }
 
   svg = svg1.append("g")
@@ -227,10 +218,9 @@ function updatePage(newVar) {
   buildLegend();
   queue()   // queue function loads all data asynchronously
     .defer(d3.json, "/getTotalByDay") //data for the whole world
+    .defer(d3.json, "/getDetails")
     .await(buildGraph);
-  // buildGraph('World');
   setMap();
-  // console.log('reloading page');
 }
 
 //build legend using varibale specified in newVar
@@ -312,11 +302,13 @@ function buildLegend() {
     .call(yaxis)
 }
 
-function buildGraph(error, totals) {
+function buildGraph(error, totals, details) {
   graphData=totals;
-  // console.log("totals");
-  // console.log(totals[474].Date);
-  var	parseDateG = d3.time.format("%Y-%m").parse;
+  countryDetails = details;
+  // console.log(countryDetails);
+  const population = Intl.NumberFormat().format(countryDetails[0].population);
+  console.log(population);
+  // var	parseDateG = d3.time.format("%Y-%m").parse;
 
   if (newVar=='Confirmed') {
     maxVar = maxTotalConfirmed;
@@ -432,7 +424,7 @@ function buildGraph(error, totals) {
     .attr("text-anchor", "middle")
     .style("font-size", "16px")
     // .style("text-decoration", "underline")
-    .text(selectedCountry + " " + selectedVar);
+    .text(selectedCountry + " " + selectedVar + " (Population " + population + " )");
 
   plot.append("g")
       .attr("class", "x axisG")
@@ -693,9 +685,10 @@ function sequenceMap() {
     })
     .on('click', function(d){
       selectedCountry = d.properties.name;
-      // console.log(d.ID);
+      // console.log(d.id);
       queue()   // queue function loads all data asynchronously
         .defer(d3.json, "/getTotalByDay?country_code="+d.id)
+        .defer(d3.json, "/getDetails?country_code="+d.id)
         .await(buildGraph);
     })
     .transition()  //select all the countries and prepare for a transition to new values
