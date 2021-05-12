@@ -40,7 +40,7 @@ var formatLegend = d3.format('.0f');
 var graphNum = 1;
 var plot; //the svg for the barchart
 var heightG = 220;
-var widthG = 470;
+var widthG = 550;
 var formatDateG = d3.time.format("%b-%Y");
 var tipG; //tooltip for barchart
 var formatDateToolTip = d3.time.format("%d-%b-%Y");
@@ -75,9 +75,12 @@ function dateCallback(error, data, maxData, maxTotals) {
   // console.log({maxTotals});
   // console.log({totals});
   // graphData = totals;
-  startingValue = new Date(data['First_Day'])
-  endingValue = new Date(data['Last_Day'])
-  endingValue.setDate(endingValue.getDate() + 1) //for d3 scale
+  startingValue = new Date(data['First_Day'].replace(/-/g, '\/').replace(/T.+/, ''))
+  // console.log(startingValue);
+  endingValue = new Date(data['Last_Day'].replace(/-/g, '\/').replace(/T.+/, ''))
+  // console.log(endingValue);
+  endingValue.setDate(endingValue.getDate() - 1) //for d3 scale
+  // console.log(endingValue);
   maxConfirmed = maxData['Confirmed']
   maxConfirmed_last24h = maxData['Confirmed_last24h']
   maxDeaths = maxData['Deaths']
@@ -311,6 +314,8 @@ function buildLegend() {
 
 function buildGraph(error, totals) {
   graphData=totals;
+  // console.log("totals");
+  // console.log(totals[474].Date);
   var	parseDateG = d3.time.format("%Y-%m").parse;
 
   if (newVar=='Confirmed') {
@@ -365,18 +370,20 @@ function buildGraph(error, totals) {
 
   // console.log(graphData);
   graphData.forEach(function(d) {
-    d.Date = new Date(d.Date);
+    d.Date = new Date(d.Date.replace(/-/g, '\/'));
     d.Confirmed = +d.Confirmed;
     d.Confirmed_last24h = +d.Confirmed_last24h;
     d.Deaths = +d.Deaths;
     d.Deaths_last24h = +d.Deaths_last24h;
   });
 
-  xGdomain = graphData.map(function(d) {return d.Date; });
-  let lastDayG = xGdomain[xGdomain.length - 1];
-  lastDayG.setDate(lastDayG.getDate() + 1);
-  xGdomain.push(lastDayG);
-  xG.domain(xGdomain);
+  // xGdomain = graphData.map(function(d) {return d.Date; });
+  // console.log(xGdomain[474]);
+  // let lastDayG = xGdomain[xGdomain.length - 1];
+  // lastDayG.setDate(lastDayG.getDate() + 1);
+  // xGdomain.push(lastDayG);
+  // xG.domain(xGdomain);
+  xG.domain(graphData.map(function(d) {return d.Date; }));
   if (newVar=='Confirmed') {
     yG.domain([0, d3.max(graphData, function(d) {return d.Confirmed; })]);
   }
