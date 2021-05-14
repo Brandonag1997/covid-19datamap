@@ -111,7 +111,7 @@ function buildSlider() {
     .attr("x", 150)
     .attr("y", 30)
     .style("font-size", "36px")
-    .text("COVID-19 Map")
+    .text("COVID-19 Map (" + selectedVar +")")
 
   // svg1.append("svg")
   //   .attr("id","svgBox")
@@ -150,6 +150,7 @@ function buildSlider() {
   brush = d3.svg.brush()
     .x(x)
     .extent([startingValue, startingValue])
+    // .extent([endingValue, endingValue])
 
   // var svgBox = d3.select("body")
   //     .append("svg")
@@ -288,7 +289,7 @@ function buildLegend() {
     .tickFormat(function(interval, d) {
       // if ((d%10 == 6) || (d%10 == 2) || (d%10 == 0)) {
       if ((d%10 == 2)) {
-        return formatLegend(interval);
+        return Intl.NumberFormat().format(interval);
       }
       else {
         return " ";
@@ -305,9 +306,7 @@ function buildLegend() {
 function buildGraph(error, totals, details) {
   graphData=totals;
   countryDetails = details;
-  // console.log(countryDetails);
   const population = Intl.NumberFormat().format(countryDetails[0].population);
-  console.log(population);
   // var	parseDateG = d3.time.format("%Y-%m").parse;
 
   if (newVar=='Confirmed') {
@@ -416,6 +415,14 @@ function buildGraph(error, totals, details) {
   plot.call(tipG);
 
   d3.select("#graph_title").remove();
+  d3.select("#map_title").remove();
+
+  svg1.append("text")
+    .attr("id","map_title")
+    .attr("x", 150)
+    .attr("y", 30)
+    .style("font-size", "36px")
+    .text("COVID-19 Map (" + selectedVar +")")
 
   plot.append("text")
     .attr("id","graph_title")
@@ -621,9 +628,9 @@ function processData(error,world,countryData) {
   }
 
   brush.on("brush", brushed);
-  button.on("click", playAnimation);
+  button.on("click", playAnimation.bind(null, 30000));
 
-  function playAnimation(){
+  function playAnimation(timeD){
     button
       // .transition()
       // // .delay(500*4*1000)
@@ -636,7 +643,7 @@ function processData(error,world,countryData) {
     .transition()
       .ease("linear")
       // .delay(500*4)
-      .duration(30000)
+      .duration(timeD)
       .call(brush.extent([endingValue, endingValue])) //new Date('2020-03-31'), new Date('2020-03-31')
       .call(brush.event)
     .transition()
@@ -654,6 +661,9 @@ function processData(error,world,countryData) {
   // playAnimation();\
   // currentAttribute = 0;
   sequenceMap();
+  // playAnimation(300);
+  
+  
   // console.log(startingValue);
   // console.log(currentAttribute);
 }
