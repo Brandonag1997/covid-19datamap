@@ -567,8 +567,30 @@ function buildGraph(error, totals, details) {
       }
     });
 
+  tipG2 = d3.tip()
+    .attr('class', 'd3-tip')
+    .offset([-10,0])
+    .html(function(d) {
+      //need to find a better way to do this
+      if (newVar2=='total_vaccinations') {
+        return "<span>" + formatDateToolTip(d.Date) + "<br></span>" + "<strong>" + selectedVar2 +":</strong> <span style='color:red'>" + d.total_vaccinations + "</span>";
+      }
+      else if (newVar2=='vaccinations_last24h') {
+        return "<span>" + formatDateToolTip(d.Date) + "<br></span>" + "<strong>" + selectedVar2 +":</strong> <span style='color:red'>" + d.vaccinations_last24h + "</span>";
+      }
+      else if (newVar2=='people_fully_vaccinated') {
+        return "<span>" + formatDateToolTip(d.Date) + "<br></span>" + "<strong>" + selectedVar2 +":</strong> <span style='color:red'>" + d.people_fully_vaccinated + "</span>";
+      }
+      else if (newVar2=='people_vaccinated') {
+        return "<span>" + formatDateToolTip(d.Date) + "<br></span>" + "<strong>" + selectedVar2 +":</strong> <span style='color:red'>" + d.people_vaccinated + "</span>";
+      }
+      else {
+        return "error";
+      }
+    });
+
   plot.call(tipG);
-  // plot2.call(tipG);
+  plot2.call(tipG2);
 
   if(graph1)
   {
@@ -722,7 +744,9 @@ function buildGraph(error, totals, details) {
           else if (newVar2=='people_vaccinated') {
             return heightG - yG2(d.people_vaccinated);
           }
-          });
+          })
+        .on('mouseover', tipG2.show)
+        .on('mouseout', tipG2.hide);
   }
 
   // Object.entries(graphData).forEach(([key, value]) => {
