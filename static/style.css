@@ -64,7 +64,7 @@ path {
 
 .graph {
 	position:absolute;
-	left:800px;
+	left:850px;
 	top:80px;
 }
 
@@ -79,6 +79,18 @@ button.play {
   top: 585px;
   left: 30px;
   font-family: 'Raleway', sans-serif;
+}
+
+select.var-list {
+  position: absolute;
+  top: 685px;
+  left: 30px;
+}
+
+select.var-list2 {
+  position: absolute;
+  top: 685px;
+  left: 300px;
 }
 
 .sliderBox {
@@ -118,6 +130,12 @@ button.play {
 }
 
 .axisG {
+  stroke: gray;
+  fill: none;
+  stroke-width: 1px;
+}
+
+.axisG2 {
   stroke: gray;
   fill: none;
   stroke-width: 1px;

@@ -193,7 +193,7 @@ function updateDatabase(updateDetails) {
   let qNames = `SELECT GROUP_CONCAT(T.column_name SEPARATOR ', ') AS names FROM (SELECT CONCAT_WS(" ",F.column_name,F.TYPE) AS column_name FROM (SELECT column_id, column_name, CASE column_name WHEN 'total_cases' THEN 'NUMERIC' WHEN 'new_cases' THEN 'NUMERIC' WHEN 'new_cases_smoothed' THEN 'NUMERIC' WHEN 'total_deaths' THEN 'NUMERIC' WHEN 'new_deaths' THEN 'NUMERIC' WHEN 'new_deaths_smoothed' THEN 'NUMERIC' WHEN 'new_cases_smoothed' THEN 'NUMERIC' WHEN 'total_deaths' THEN 'NUMERIC' ELSE 'TEXT' END AS TYPE FROM codebook ORDER BY column_id) AS F) AS T;`
   //let q1 = "CREATE TEMPORARY TABLE world_data_full (iso_code TEXT, continent TEXT, location TEXT, date TEXT, total_cases NUMERIC, new_cases NUMERIC, new_cases_smoothed NUMERIC, total_deaths NUMERIC, new_deaths NUMERIC, new_deaths_smoothed NUMERIC, total_cases_per_million TEXT, new_cases_per_million TEXT, new_cases_smoothed_per_million TEXT, total_deaths_per_million TEXT, new_deaths_per_million TEXT, new_deaths_smoothed_per_million TEXT, icu_patients TEXT, icu_patients_per_million  TEXT, hosp_patients TEXT, hosp_patients_per_million TEXT, weekly_icu_admissions TEXT, weekly_icu_admissions_per_million TEXT, weekly_hosp_admissions TEXT, weekly_hosp_admissions_per_million TEXT, total_tests TEXT, new_tests TEXT, total_tests_per_thousand TEXT, new_tests_per_thousand TEXT, new_tests_smoothed TEXT, new_tests_smoothed_per_thousand TEXT, tests_per_case TEXT, positive_rate TEXT, tests_units TEXT, stringency_index TEXT, population TEXT, population_density TEXT, median_age TEXT, aged_65_older TEXT, aged_70_older TEXT, gdp_per_capita TEXT, extreme_poverty TEXT, cardiovasc_death_rate TEXT, diabetes_prevalence TEXT, female_smokers TEXT, male_smokers TEXT, handwashing_facilities TEXT, hospital_beds_per_thousand TEXT, life_expectancy TEXT, human_development_index TEXT);"
   let q2 = "DROP TABLE world_data;"
-  let q3 = "CREATE TABLE world_data (iso_code CHAR(3), Country VARCHAR(100), Confirmed INT, Confirmed_last24h INT, Deaths INT, Deaths_last24h INT, Date TEXT);"
+  let q3 = "CREATE TABLE world_data (iso_code CHAR(3), Country VARCHAR(100), Confirmed INT, Confirmed_last24h INT, Deaths INT, Deaths_last24h INT, total_vaccinations INT, people_vaccinated INT, people_fully_vaccinated INT, new_vaccinations INT, Date TEXT);"
   let q4 = "DROP TABLE country_details;"
   let q5 = "CREATE TABLE country_details (iso_code CHAR(3), population TEXT, population_density TEXT, median_age TEXT, hospital_beds_per_thousand TEXT, life_expectancy TEXT, PRIMARY KEY(iso_code));"
 
@@ -284,7 +284,7 @@ function updateDatabase(updateDetails) {
   stream.pipe(csvStream);
 
   function insertData() {
-    let insertQuery = "INSERT INTO world_data (iso_code,Country,Confirmed,Confirmed_last24h,Deaths,Deaths_last24h,Date) SELECT iso_code,location,total_cases,new_cases,total_deaths,new_deaths,date FROM world_data_full;"
+    let insertQuery = "INSERT INTO world_data (iso_code,Country,Confirmed,Confirmed_last24h,Deaths,Deaths_last24h,total_vaccinations,people_vaccinated,people_fully_vaccinated,new_vaccinations,Date) SELECT iso_code,location,total_cases,new_cases,total_deaths,new_deaths,total_vaccinations,people_vaccinated,people_fully_vaccinated,new_vaccinations,date FROM world_data_full;"
     let indexQuery = "CREATE INDEX country_code ON world_data (iso_code, Country);"
     conn.query(insertQuery, function(err) {
         if (err) {
@@ -321,7 +321,7 @@ function updateDatabase(updateDetails) {
 }
 
 function getCountryData() {
-  let statement = "SELECT DISTINCT id_date.id AS id, DATE(IFNULL(W.Date,id_date.Date)) AS Date, IFNULL(W.Confirmed,0) AS Confirmed, IFNULL(W.Confirmed_last24h,0) AS Confirmed_last24h, IFNULL(W.Deaths,0) AS Deaths, IFNULL(W.Deaths_last24h,0) AS Deaths_last24h FROM world_data AS W RIGHT JOIN (SELECT I1.`country-code` AS ID, T1.Date AS Date, I1.`alpha-3` AS Name FROM (SELECT DISTINCT i.`alpha-3` AS id, w.Date as Date FROM iso AS i, world_data AS w) AS T1 INNER JOIN iso AS I1 ON T1.id = I1.`alpha-3`) AS id_date ON W.iso_code = id_date.Name AND W.Date = id_date.Date;"
+  let statement = "SELECT DISTINCT id_date.id AS id, DATE(IFNULL(W.Date,id_date.Date)) AS Date, IFNULL(W.Confirmed,0) AS Confirmed, IFNULL(W.Confirmed_last24h,0) AS Confirmed_last24h, IFNULL(W.Deaths,0) AS Deaths, IFNULL(W.Deaths_last24h,0) AS Deaths_last24h, IFNULL(W.total_vaccinations,0) AS total_vaccinations, IFNULL(W.people_vaccinated,0) AS people_vaccinated, IFNULL(W.people_fully_vaccinated,0) AS people_fully_vaccinated, IFNULL(W.new_vaccinations,0) AS vaccinations_last24h FROM world_data AS W RIGHT JOIN (SELECT I1.`country-code` AS ID, T1.Date AS Date, I1.`alpha-3` AS Name FROM (SELECT DISTINCT i.`alpha-3` AS id, w.Date as Date FROM iso AS i, world_data AS w) AS T1 INNER JOIN iso AS I1 ON T1.id = I1.`alpha-3`) AS id_date ON W.iso_code = id_date.Name AND W.Date = id_date.Date;"
 
   conn.query(statement,function(err, rows, fields) {
       if (err) {
@@ -333,7 +333,7 @@ function getCountryData() {
           if (!(rows[i].id in output)) {
             output[rows[i].id] = [];
           }
-          output[rows[i].id].push({"date": rows[i].Date, "cases": rows[i].Confirmed, "cases_last24": rows[i].Confirmed_last24h, "deaths": rows[i].Deaths, "deaths_last24": rows[i].Deaths_last24h});
+          output[rows[i].id].push({"date": rows[i].Date, "cases": rows[i].Confirmed, "cases_last24": rows[i].Confirmed_last24h, "deaths": rows[i].Deaths, "deaths_last24": rows[i].Deaths_last24h, "total_vaccinations": rows[i].total_vaccinations, "people_vaccinated": rows[i].people_vaccinated, "people_fully_vaccinated": rows[i].people_fully_vaccinated, "vaccinations_last24h": rows[i].vaccinations_last24h});
         }
         countryData = output;
         console.log('country data cached');
@@ -362,62 +362,59 @@ app.get("/dateRange", function(req, res){
 });
 
 app.get("/getMax", function(req, res){
-    let statement = "SELECT MAX(Confirmed) AS Confirmed, MAX(Confirmed_last24h) AS Confirmed_last24h, MAX(Deaths) AS Deaths, MAX(Deaths_last24h) AS Deaths_last24h FROM world_data WHERE Country!='World';"
+  let statement = "SELECT MAX(Confirmed) AS Confirmed, MAX(Confirmed_last24h) AS Confirmed_last24h, MAX(Deaths) AS Deaths, MAX(Deaths_last24h) AS Deaths_last24h, MAX(total_vaccinations) AS total_vaccinations, MAX(people_vaccinated) AS people_vaccinated, MAX(people_fully_vaccinated) AS people_fully_vaccinated, MAX(new_vaccinations) AS vaccinations_last24h FROM world_data WHERE Country!='World';"
 
-    conn.query(statement,function(err, rows, fields) {
-        if (err) {
-            console.log('Error during query select...' + err.sqlMessage);
-            res.json({"failed":"getMax"}); res.status(500);
+  conn.query(statement,function(err, rows, fields) {
+      if (err) {
+          console.log('Error during query select...' + err.sqlMessage);
+          res.json({"failed":"getMax"}); res.status(500);
 
-        } else {
-            let output = {"Confirmed": rows[0].Confirmed, "Confirmed_last24h": rows[0].Confirmed_last24h, "Deaths": rows[0].Deaths, "Deaths_last24h": rows[0].Deaths_last24h};
+      } else {
+          let output = {"Confirmed": rows[0].Confirmed, "Confirmed_last24h": rows[0].Confirmed_last24h, "Deaths": rows[0].Deaths, "Deaths_last24h": rows[0].Deaths_last24h, "total_vaccinations": rows[0].total_vaccinations, "people_vaccinated": rows[0].people_vaccinated, "people_fully_vaccinated": rows[0].people_fully_vaccinated, "vaccinations_last24h": rows[0].vaccinations_last24h};
 
-            res.json(output);
-        }
-    });
+          res.json(output);
+      }
+  });
 });
 
 app.get("/getTotalByDay", function(req, res){
-    let country_code = req.query.country_code;
-    let statement = "";
-    if (country_code) {
-      statement = "SELECT Date, Confirmed, Confirmed_last24h, Deaths, Deaths_last24h FROM world_data AS W INNER JOIN iso AS I ON I.`alpha-3` = W.iso_code WHERE I.`country-code`=" + `'${country_code}'` + " GROUP BY Date ORDER BY Date;"
-    } else {
-      statement = "SELECT Date, Confirmed, Confirmed_last24h, Deaths, Deaths_last24h FROM world_data WHERE country='World' GROUP BY Date ORDER BY Date;"
-    }
-    conn.query(statement,function(err, rows, fields) {
-        if (err) {
-            console.log('Error during query select...' + err.sqlMessage);
-            res.json({"failed":"getTotalByDay"}); res.status(500);
+  let country_code = req.query.country_code;
+  let statement = "";
+  if (country_code) {
+    statement = "SELECT Date, Confirmed, Confirmed_last24h, Deaths, Deaths_last24h, total_vaccinations, people_vaccinated, people_fully_vaccinated, new_vaccinations AS vaccinations_last24h FROM world_data AS W INNER JOIN iso AS I ON I.`alpha-3` = W.iso_code WHERE I.`country-code`=" + `'${country_code}'` + " GROUP BY Date ORDER BY Date;"
+  } else {
+    statement = "SELECT Date, Confirmed, Confirmed_last24h, Deaths, Deaths_last24h, total_vaccinations, people_vaccinated, people_fully_vaccinated, new_vaccinations AS vaccinations_last24h FROM world_data WHERE country='World' GROUP BY Date ORDER BY Date;"
+  }
+  conn.query(statement,function(err, rows, fields) {
+      if (err) {
+          console.log('Error during query select...' + err.sqlMessage);
+          res.json({"failed":"getTotalByDay"}); res.status(500);
 
-        } else {
-          let output = [];
-          // console.log(rows);
-          for(let i = 0; i < rows.length; i++){
-            output.push({"Date": rows[i].Date, "Confirmed": rows[i].Confirmed, "Confirmed_last24h": rows[i].Confirmed_last24h, "Deaths": rows[i].Deaths, "Deaths_last24h": rows[i].Deaths_last24h});
-          }
-          // console.log(output);
-          res.json(output);
-
+      } else {
+        let output = [];
+        for(let i = 0; i < rows.length; i++){
+          output.push({"Date": rows[i].Date, "Confirmed": rows[i].Confirmed, "Confirmed_last24h": rows[i].Confirmed_last24h, "Deaths": rows[i].Deaths, "Deaths_last24h": rows[i].Deaths_last24h, "total_vaccinations": rows[i].total_vaccinations, "people_vaccinated": rows[i].people_vaccinated, "people_fully_vaccinated": rows[i].people_fully_vaccinated, "vaccinations_last24h": rows[i].vaccinations_last24h});
         }
-    });
+        res.json(output);
+
+      }
+  });
 });
 
 app.get("/getTotalMax", function(req, res){
-    let statement = "SELECT MAX(Confirmed) AS Confirmed, MAX(Confirmed_last24h) AS Confirmed_last24h, MAX(Deaths) AS Deaths, MAX(Deaths_last24h) AS Deaths_last24h FROM world_data;"
+  let statement = "SELECT MAX(Confirmed) AS Confirmed, MAX(Confirmed_last24h) AS Confirmed_last24h, MAX(Deaths) AS Deaths, MAX(Deaths_last24h) AS Deaths_last24h, MAX(total_vaccinations) AS total_vaccinations, MAX(people_vaccinated) AS people_vaccinated, MAX(people_fully_vaccinated) AS people_fully_vaccinated, MAX(new_vaccinations) AS vaccinations_last24h FROM world_data;"
 
-    conn.query(statement,function(err, rows, fields) {
-        if (err) {
-            console.log('Error during query select...' + err.sqlMessage);
-            res.json({"failed":"getTotalMax"}); res.status(500);
+  conn.query(statement,function(err, rows, fields) {
+      if (err) {
+          console.log('Error during query select...' + err.sqlMessage);
+          res.json({"failed":"getTotalMax"}); res.status(500);
 
-        } else {
-          let output = {"Confirmed": rows[0].Confirmed, "Confirmed_last24h": rows[0].Confirmed_last24h, "Deaths": rows[0].Deaths, "Deaths_last24h": rows[0].Deaths_last24h};
-          // console.log(output);
-          res.json(output);
+      } else {
+        let output = {"Confirmed": rows[0].Confirmed, "Confirmed_last24h": rows[0].Confirmed_last24h, "Deaths": rows[0].Deaths, "Deaths_last24h": rows[0].Deaths_last24h, "total_vaccinations": rows[0].total_vaccinations, "people_vaccinated": rows[0].people_vaccinated, "people_fully_vaccinated": rows[0].people_fully_vaccinated, "vaccinations_last24h": rows[0].vaccinations_last24h};
+        res.json(output);
 
-        }
-    });
+      }
+  });
 });
 
 app.get("/getDetails", function(req, res){
