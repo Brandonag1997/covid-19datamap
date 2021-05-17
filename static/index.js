@@ -1,5 +1,6 @@
 //global vars
 var selectedCountry = "World"
+var selectedCountryISO;
 var newVar = 'Confirmed_last24h';
 var newVar2 = 'vaccinations_last24h';
 var projection, path, graticule, svg, attributeArray = [], currentAttribute, playing = false;
@@ -163,6 +164,7 @@ function buildSlider() {
 
   function onchange() {
     graph1 = true;
+    graph2 = true;
     selectedVar = d3.select('select.var-list').property('value');
     newVar = dropDownVars[dropDownChoices.indexOf(selectedVar)];
     selectedCountry = 'World'
@@ -173,11 +175,21 @@ function buildSlider() {
     graph2 = true;
     selectedVar2 = d3.select('select.var-list2').property('value');
     newVar2 = dropDownVars2[dropDownChoices2.indexOf(selectedVar2)];
-    selectedCountry = 'World'
-    queue()   // queue function loads all data asynchronously
+    
+    if(selectedCountry == 'World')
+    {
+      queue()   // queue function loads all data asynchronously
       .defer(d3.json, "/getTotalByDay") //data for the whole world
       .defer(d3.json, "/getDetails")
       .await(buildGraph);
+    }
+    else
+    {
+      queue()   // queue function loads all data asynchronously
+        .defer(d3.json, "/getTotalByDay?country_code="+selectedCountryISO)
+        .defer(d3.json, "/getDetails?country_code="+selectedCountryISO)
+        .await(buildGraph);
+    }
     }
   svg = svg1.append("g")
     .attr("height", 500)
@@ -367,6 +379,8 @@ function buildGraph(error, totals, details) {
   const population = Intl.NumberFormat().format(countryDetails[0].population);
   // var	parseDateG = d3.time.format("%Y-%m").parse;
 
+  var xG, yG, xAxisG, yAxisG;
+  var xG2, yG2, xAxisG2, yAxisG2;
   if(graph1){
     if (newVar=='Confirmed') {
       maxVar = maxTotalConfirmed;
@@ -380,6 +394,29 @@ function buildGraph(error, totals, details) {
     else if (newVar=='Deaths_last24h') {
       maxVar = maxTotalDeaths_last24h;
     }
+
+    xG = d3.scale.ordinal().rangeRoundBands([0, widthG], .05);
+    yG = d3.scale.linear()
+      .domain([0, maxVar])
+      .range([heightG, 0]);    
+  
+    xAxisG = d3.svg.axis()
+      .scale(xG)
+      .orient("bottom")
+      .tickFormat(function(interval, d) {
+        var formatTest = d3.time.format("%d");
+        if (formatTest(interval)=="01") { //only show ticks for the first of every month
+          return formatDateG(interval);
+        }
+        else {
+          return " ";
+        }
+      });
+
+    yAxisG = d3.svg.axis()
+      .scale(yG)
+      .orient("left")
+      .ticks(10);
   }
   if(graph2){
     if (newVar2=='total_vaccinations') {
@@ -394,54 +431,41 @@ function buildGraph(error, totals, details) {
     else if (newVar2=='people_vaccinated') {
       maxVar2 = maxTotalpeople_vaccinated
     }
+
+    xG2 = d3.scale.ordinal().rangeRoundBands([0, widthG], .05);
+    yG2 = d3.scale.linear()
+      .domain([0, maxVar2])
+      .range([heightG, 0]);
+
+    xAxisG2 = d3.svg.axis()
+      .scale(xG2)
+      .orient("bottom")
+      .tickFormat(function(interval, d) {
+        var formatTest = d3.time.format("%d");
+        if (formatTest(interval)=="01") { //only show ticks for the first of every month
+          return formatDateG(interval);
+        }
+        else {
+          return " ";
+        }
+      });
+  
+    
+    
+    yAxisG2 = d3.svg.axis()
+      .scale(yG2)
+      .orient("left")
+      .ticks(10);
   }
   // console.log(newVar);
   // console.log(maxVar);
-  var xG = d3.scale.ordinal().rangeRoundBands([0, widthG], .05);
-  var yG = d3.scale.linear()
-    .domain([0, maxVar])
-    .range([heightG, 0]);
-
-  var xG2 = d3.scale.ordinal().rangeRoundBands([0, widthG], .05);
-  var yG2 = d3.scale.linear()
-    .domain([0, maxVar2])
-    .range([heightG, 0]);
-
-  var xAxisG = d3.svg.axis()
-    .scale(xG)
-    .orient("bottom")
-    .tickFormat(function(interval, d) {
-      var formatTest = d3.time.format("%d");
-      if (formatTest(interval)=="01") { //only show ticks for the first of every month
-        return formatDateG(interval);
-      }
-      else {
-        return " ";
-      }
-    });
-
-  var xAxisG2 = d3.svg.axis()
-    .scale(xG2)
-    .orient("bottom")
-    .tickFormat(function(interval, d) {
-      var formatTest = d3.time.format("%d");
-      if (formatTest(interval)=="01") { //only show ticks for the first of every month
-        return formatDateG(interval);
-      }
-      else {
-        return " ";
-      }
-    });
-
-  var yAxisG = d3.svg.axis()
-    .scale(yG)
-    .orient("left")
-    .ticks(10);
   
-  var yAxisG2 = d3.svg.axis()
-    .scale(yG2)
-    .orient("left")
-    .ticks(10);
+
+  
+
+  
+
+  
 
   if (graph1) {
     d3.select("#bar_graph").remove();
@@ -465,8 +489,7 @@ function buildGraph(error, totals, details) {
         .attr("transform", "translate(0," + 300 + ")")
         .attr("class", "graph");
   }
-  graph1 = false;
-  graph2 = false;
+  
 
   // console.log(graphData);
   graphData.forEach(function(d) {
@@ -487,35 +510,41 @@ function buildGraph(error, totals, details) {
   // lastDayG.setDate(lastDayG.getDate() + 1);
   // xGdomain.push(lastDayG);
   // xG.domain(xGdomain);
-  xG.domain(graphData.map(function(d) {return d.Date; }));
-  xG2.domain(graphData.map(function(d) {return d.Date; }));
-  if (newVar=='Confirmed') {
-    yG.domain([0, d3.max(graphData, function(d) {return d.Confirmed; })]);
-  }
-  else if (newVar=='Confirmed_last24h') {
-    yG.domain([0, d3.max(graphData, function(d) {return d.Confirmed_last24h; })]);
-  }
-  else if (newVar=='Deaths') {
-    yG.domain([0, d3.max(graphData, function(d) {return d.Deaths; })]);
-  }
-  else if (newVar=='Deaths_last24h') {
-    yG.domain([0, d3.max(graphData, function(d) {return d.Deaths_last24h; })]);
-  }
-
-  if (newVar2=='total_vaccinations') {
-    yG2.domain([0, d3.max(graphData, function(d) {return d.total_vaccinations; })]);
-  }
-  else if (newVar2=='vaccinations_last24h') {
-    yG2.domain([0, d3.max(graphData, function(d) {return d.vaccinations_last24h; })]);
-  }
-  else if (newVar2=='people_fully_vaccinated') {
-    yG2.domain([0, d3.max(graphData, function(d) {return d.people_fully_vaccinated; })]);
-  }
-  else if (newVar2=='people_vaccinated') {
-    yG2.domain([0, d3.max(graphData, function(d) {return d.people_vaccinated; })]);
+  if(graph1)
+  {  
+    xG.domain(graphData.map(function(d) {return d.Date; }));
+    if (newVar=='Confirmed') {
+      yG.domain([0, d3.max(graphData, function(d) {return d.Confirmed; })]);
+    }
+    else if (newVar=='Confirmed_last24h') {
+      yG.domain([0, d3.max(graphData, function(d) {return d.Confirmed_last24h; })]);
+    }
+    else if (newVar=='Deaths') {
+      yG.domain([0, d3.max(graphData, function(d) {return d.Deaths; })]);
+    }
+    else if (newVar=='Deaths_last24h') {
+      yG.domain([0, d3.max(graphData, function(d) {return d.Deaths_last24h; })]);
+    }
   }
 
+  if(graph2)
+  {  
+    xG2.domain(graphData.map(function(d) {return d.Date; }));
+    if (newVar2=='total_vaccinations') {
+      yG2.domain([0, d3.max(graphData, function(d) {return d.total_vaccinations; })]);
+    }
+    else if (newVar2=='vaccinations_last24h') {
+      yG2.domain([0, d3.max(graphData, function(d) {return d.vaccinations_last24h; })]);
+    }
+    else if (newVar2=='people_fully_vaccinated') {
+      yG2.domain([0, d3.max(graphData, function(d) {return d.people_fully_vaccinated; })]);
+    }
+    else if (newVar2=='people_vaccinated') {
+      yG2.domain([0, d3.max(graphData, function(d) {return d.people_vaccinated; })]);
+    }
+  }
 
+  
   tipG = d3.tip()
     .attr('class', 'd3-tip')
     .offset([-10,0])
@@ -541,156 +570,160 @@ function buildGraph(error, totals, details) {
   plot.call(tipG);
   // plot2.call(tipG);
 
-  d3.select("#graph_title").remove();
-  d3.select("#graph_title2").remove();
-  d3.select("#map_title").remove();
+  if(graph1)
+  {
+    d3.select("#graph_title").remove();
+    d3.select("#map_title").remove();
+    svg1.append("text")
+      .attr("id","map_title")
+      .attr("x", 150)
+      .attr("y", 30)
+      .style("font-size", "36px")
+      .text("COVID-19 Map (" + selectedVar +")")
 
-  svg1.append("text")
-    .attr("id","map_title")
-    .attr("x", 150)
-    .attr("y", 30)
-    .style("font-size", "36px")
-    .text("COVID-19 Map (" + selectedVar +")")
+    plot.append("text")
+      .attr("id","graph_title")
+      .attr("x", (widthG / 2) + 10)
+      .attr("y", 15)
+      .attr("text-anchor", "middle")
+      .style("font-size", "16px")
+      // .style("text-decoration", "underline")
+      .text(selectedCountry + " " + selectedVar + " (Population " + population + " )");
 
-  plot.append("text")
-    .attr("id","graph_title")
-    .attr("x", (widthG / 2) + 10)
-    .attr("y", 15)
-    .attr("text-anchor", "middle")
-    .style("font-size", "16px")
-    // .style("text-decoration", "underline")
-    .text(selectedCountry + " " + selectedVar + " (Population " + population + " )");
-
-    //vaccine graph
-    plot2.append("text")
-    .attr("id","graph_title2")
-    .attr("x", (widthG / 2) + 10)
-    .attr("y", 15)
-    .attr("text-anchor", "middle")
-    .style("font-size", "16px")
-    .text(selectedCountry + " " + selectedVar2 + " (Population " + population + " )");
-
-  plot.append("g")
+    plot.append("g")
       .attr("class", "x axisG")
       .attr("transform", "translate(100," + 270 + ")")
       .call(xAxisG)
-    .selectAll("text")
-      .style("text-anchor", "end")
-      .attr("dx", "-.8em")
-      .attr("dy", "-.55em")
-      .attr("transform", "rotate(-90)");
+      .selectAll("text")
+        .style("text-anchor", "end")
+        .attr("dx", "-.8em")
+        .attr("dy", "-.55em")
+        .attr("transform", "rotate(-90)");
 
-  //vaccine graph
-  plot2.append("g")
-      .attr("class", "x axisG2")
-      .attr("transform", "translate(100," + 270 + ")")
-      .call(xAxisG2)
-    .selectAll("text")
-      .style("text-anchor", "end")
-      .attr("dx", "-.8em")
-      .attr("dy", "-.55em")
-      .attr("transform", "rotate(-90)");
+    plot.append("g")
+        .attr("class", "y axisG")
+        .style("stroke-width", "1px")
+        .attr("transform", "translate(100,50)")
+        .call(yAxisG)
+      .append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("y", 6)
+        .attr("dy", ".71em")
+        .style("text-anchor", "end");
 
-  plot.append("g")
-      .attr("class", "y axisG")
-      .style("stroke-width", "1px")
-      .attr("transform", "translate(100,50)")
-      .call(yAxisG)
-    .append("text")
-      .attr("transform", "rotate(-90)")
-      .attr("y", 6)
-      .attr("dy", ".71em")
-      .style("text-anchor", "end");
+    plot.selectAll("bar")
+        .data(graphData)
+      .enter().append("rect")
+        .attr("class", "bar")
+        .attr("transform", "translate(100,50)")
+        .attr("x", function(d) {return xG(d.Date); })
+        .attr("width", xG.rangeBand())
+        // .attr("width", 4)
+        .attr("y", function(d) {
+          if (newVar=='Confirmed') {
+            return yG(d.Confirmed);
+          }
+          else if (newVar=='Confirmed_last24h') {
+            return yG(d.Confirmed_last24h);
+          }
+          else if (newVar=='Deaths') {
+            return yG(d.Deaths);
+          }
+          else if (newVar=='Deaths_last24h') {
+            return yG(d.Deaths_last24h);
+          }
+          })
+        .attr("height", function(d) {
+          if (newVar=='Confirmed') {
+            return heightG - yG(d.Confirmed);
+          }
+          else if (newVar=='Confirmed_last24h') {
+            return heightG - yG(d.Confirmed_last24h);
+          }
+          else if (newVar=='Deaths') {
+            return heightG - yG(d.Deaths);
+          }
+          else if (newVar=='Deaths_last24h') {
+            return heightG - yG(d.Deaths_last24h);
+          }
+          })
+        .on('mouseover', tipG.show)
+        .on('mouseout', tipG.hide);
+  }
+  
+  if(graph2)
+  {
+    d3.select("#graph_title2").remove();
+    //vaccine graph
+    plot2.append("text")
+      .attr("id","graph_title2")
+      .attr("x", (widthG / 2) + 10)
+      .attr("y", 15)
+      .attr("text-anchor", "middle")
+      .style("font-size", "16px")
+      .text(selectedCountry + " " + selectedVar2 + " (Population " + population + " )");
 
-  plot2.append("g")
-      .attr("class", "y axisG2")
-      .style("stroke-width", "1px")
-      .attr("transform", "translate(100,50)")
-      .call(yAxisG2)
-    .append("text")
-      .attr("transform", "rotate(-90)")
-      .attr("y", 6)
-      .attr("dy", ".71em")
-      .style("text-anchor", "end");
-      // .text("Value ($)");
-  // console.log(xG.rangeBand());
+      //vaccine graph
+    plot2.append("g")
+          .attr("class", "x axisG2")
+          .attr("transform", "translate(100," + 270 + ")")
+          .call(xAxisG2)
+        .selectAll("text")
+          .style("text-anchor", "end")
+          .attr("dx", "-.8em")
+          .attr("dy", "-.55em")
+          .attr("transform", "rotate(-90)");
+  
+    plot2.append("g")
+        .attr("class", "y axisG2")
+        .style("stroke-width", "1px")
+        .attr("transform", "translate(100,50)")
+        .call(yAxisG2)
+      .append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("y", 6)
+        .attr("dy", ".71em")
+        .style("text-anchor", "end");
+        // .text("Value ($)");
+    // console.log(xG.rangeBand());
 
-  plot.selectAll("bar")
-      .data(graphData)
-    .enter().append("rect")
-      .attr("class", "bar")
-      .attr("transform", "translate(100,50)")
-      .attr("x", function(d) {return xG(d.Date); })
-      .attr("width", xG.rangeBand())
-      // .attr("width", 4)
-      .attr("y", function(d) {
-        if (newVar=='Confirmed') {
-          return yG(d.Confirmed);
-        }
-        else if (newVar=='Confirmed_last24h') {
-          return yG(d.Confirmed_last24h);
-        }
-        else if (newVar=='Deaths') {
-          return yG(d.Deaths);
-        }
-        else if (newVar=='Deaths_last24h') {
-          return yG(d.Deaths_last24h);
-        }
-        })
-      .attr("height", function(d) {
-        if (newVar=='Confirmed') {
-          return heightG - yG(d.Confirmed);
-        }
-        else if (newVar=='Confirmed_last24h') {
-          return heightG - yG(d.Confirmed_last24h);
-        }
-        else if (newVar=='Deaths') {
-          return heightG - yG(d.Deaths);
-        }
-        else if (newVar=='Deaths_last24h') {
-          return heightG - yG(d.Deaths_last24h);
-        }
-        })
-      .on('mouseover', tipG.show)
-      .on('mouseout', tipG.hide);
-
-  plot2.selectAll("bar")
-      .data(graphData)
-    .enter().append("rect")
-      .attr("class", "bar")
-      .attr("transform", "translate(100,50)")
-      .attr("x", function(d) {return xG2(d.Date); })
-      .attr("width", xG2.rangeBand())
-      // .attr("width", 4)
-      .attr("y", function(d) {
-        if (newVar2=='total_vaccinations') {
-          return yG2(d.total_vaccinations);
-        }
-        else if (newVar2=='vaccinations_last24h') {
-          return yG2(d.vaccinations_last24h);
-        }
-        else if (newVar2=='people_fully_vaccinated') {
-          return yG2(d.people_fully_vaccinated);
-        }
-        else if (newVar2=='people_vaccinated') {
-          return yG2(d.people_vaccinated);
-        }
-        })
-      .attr("height", function(d) {
-        if (newVar2=='total_vaccinations') {
-          return heightG - yG2(d.total_vaccinations);
-        }
-        else if (newVar2=='vaccinations_last24h') {
-          return heightG - yG2(d.vaccinations_last24h);
-        }
-        else if (newVar2=='people_fully_vaccinated') {
-          return heightG - yG2(d.people_fully_vaccinated);
-        }
-        else if (newVar2=='people_vaccinated') {
-          return heightG - yG2(d.people_vaccinated);
-        }
-        });
-        
+    plot2.selectAll("bar")
+        .data(graphData)
+      .enter().append("rect")
+        .attr("class", "bar")
+        .attr("transform", "translate(100,50)")
+        .attr("x", function(d) {return xG2(d.Date); })
+        .attr("width", xG2.rangeBand())
+        // .attr("width", 4)
+        .attr("y", function(d) {
+          if (newVar2=='total_vaccinations') {
+            return yG2(d.total_vaccinations);
+          }
+          else if (newVar2=='vaccinations_last24h') {
+            return yG2(d.vaccinations_last24h);
+          }
+          else if (newVar2=='people_fully_vaccinated') {
+            return yG2(d.people_fully_vaccinated);
+          }
+          else if (newVar2=='people_vaccinated') {
+            return yG2(d.people_vaccinated);
+          }
+          })
+        .attr("height", function(d) {
+          if (newVar2=='total_vaccinations') {
+            return heightG - yG2(d.total_vaccinations);
+          }
+          else if (newVar2=='vaccinations_last24h') {
+            return heightG - yG2(d.vaccinations_last24h);
+          }
+          else if (newVar2=='people_fully_vaccinated') {
+            return heightG - yG2(d.people_fully_vaccinated);
+          }
+          else if (newVar2=='people_vaccinated') {
+            return heightG - yG2(d.people_vaccinated);
+          }
+          });
+  }
 
   // Object.entries(graphData).forEach(([key, value]) => {
   //   console.log(key + ' - ' + value) // key - value
@@ -698,6 +731,8 @@ function buildGraph(error, totals, details) {
   // });
 
   // x.domain(data.map(function(d) {}))
+  graph1 = false;
+  graph2 = false;
 
 }
 
@@ -893,6 +928,7 @@ function sequenceMap() {
     })
     .on('click', function(d){
       selectedCountry = d.properties.name;
+      selectedCountryISO = d.id;
       // console.log(d.id);
       graph1 = true;
       graph2 = true;
