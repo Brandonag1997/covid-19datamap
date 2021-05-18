@@ -93,6 +93,12 @@ select.var-list2 {
   left: 300px;
 }
 
+select.country-search {
+  position: absolute;
+  top: 685px;
+  left: 600px;
+}
+
 .sliderBox {
   position:absolute;
 	left:300px;

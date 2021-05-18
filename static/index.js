@@ -1,6 +1,4 @@
 //global vars
-var selectedCountry = "World"
-var selectedCountryISO;
 var newVar = 'Confirmed_last24h';
 var newVar2 = 'vaccinations_last24h';
 var projection, path, graticule, svg, attributeArray = [], currentAttribute, playing = false;
@@ -26,12 +24,17 @@ let countryDataSaved = null;
 //dropdown vars
 var dropDownChoices = ["Daily Confirmed Cases", "Total Confirmed Cases", "Daily Deaths", "Total Deaths"];
 var dropDownChoices2 = ["Daily Vaccinations", "Total Vaccinations", "People Vaccinated", "People Fully Vaccinated"];
+var dropDownCountryChoices = ["World", "Aruba","Afghanistan","Angola","Anguilla","Albania","Andorra","United Arab Emirates","Argentina","Armenia","Antigua and Barbuda","Australia","Austria","Azerbaijan","Burundi","Belgium","Benin","Burkina Faso","Bangladesh","Bulgaria","Bahrain","Bahamas","Bosnia and Herzegovina","Belarus","Belize","Bermuda","Brazil","Barbados","Bhutan","Botswana","Central African Republic","Canada","Switzerland","Chile","China","Côte d'Ivoire","Cameroon","Congo","Colombia","Comoros","Costa Rica","Cuba","Curaçao","Cayman Islands","Cyprus","Czechia","Germany","Djibouti","Dominica","Denmark","Dominican Republic","Algeria","Ecuador","Egypt","Eritrea","Spain","Estonia","Ethiopia","Finland","Fiji","France","Gabon","Georgia","Guernsey","Ghana","Gibraltar","Guinea","Gambia","Guinea-Bissau","Equatorial Guinea","Greece","Grenada","Greenland","Guatemala","Guyana","Hong Kong","Honduras","Croatia","Haiti","Hungary","Indonesia","Isle of Man","India","Ireland","Iraq","Iceland","Israel","Italy","Jamaica","Jersey","Jordan","Japan","Kazakhstan","Kenya","Kyrgyzstan","Cambodia","Saint Kitts and Nevis","Kuwait","Lebanon","Liberia","Libya","Saint Lucia","Liechtenstein","Sri Lanka","Lesotho","Lithuania","Luxembourg","Latvia","Macao","Morocco","Monaco","Madagascar","Maldives","Mexico","Marshall Islands","North Macedonia","Mali","Malta","Myanmar","Montenegro","Mongolia","Mozambique","Mauritania","Montserrat","Mauritius","Malawi","Malaysia","Namibia","New Caledonia","Niger","Nigeria","Nicaragua","Netherlands","Norway","Nepal","Nauru","New Zealand","Oman","Pakistan","Panama","Peru","Philippines","Papua New Guinea","Poland","Portugal","Paraguay","French Polynesia","Qatar","Romania","Rwanda","Saudi Arabia","Sudan","Senegal","Singapore","Solomon Islands","Sierra Leone","El Salvador","San Marino","Somalia","Serbia","South Sudan","Sao Tome and Principe","Suriname","Slovakia","Slovenia","Sweden","Eswatini","Sint Maarten (Dutch part)","Seychelles","Turks and Caicos Islands","Chad","Togo","Thailand","Tajikistan","Turkmenistan","Tonga","Trinidad and Tobago","Tunisia","Turkey","Tuvalu","Uganda","Ukraine","Uruguay","Uzbekistan","Saint Vincent and the Grenadines","Vanuatu","Wallis and Futuna","Samoa","Yemen","South Africa","Zambia","Zimbabwe"];
 var dropDownVars = ["Confirmed_last24h", "Confirmed", "Deaths_last24h", "Deaths"];
 var dropDownVars2 = ["vaccinations_last24h", "total_vaccinations", "people_vaccinated", "people_fully_vaccinated"];
+var dropDownCountryVars = ["","533","004","024","660","008","020","784","032","051","028","036","040","031","108","056","204","854","050","100","048","044","070","112","084","060","076","052","064","072","140","124","756","152","156","384","120","178","170","174","188","192","531","136","196","203","276","262","212","208","214","012","218","818","232","724","233","231","246","242","250","266","268","831","288","292","324","270","624","226","300","308","304","320","328","344","340","191","332","348","360","833","356","372","368","352","376","380","388","832","400","392","398","404","417","116","659","414","422","430","434","662","438","144","426","440","442","428","446","504","492","450","462","484","584","807","466","470","104","499","496","508","478","500","480","454","458","516","540","562","566","558","528","578","524","520","554","512","586","591","604","608","598","616","620","600","258","634","642","646","682","729","686","702","090","694","222","674","706","688","728","678","740","703","705","752","748","534","690","796","148","768","764","762","795","776","780","788","792","798","800","804","858","860","670","548","876","882","887","710","894","716"];
 var selectedVar = "Daily Confirmed Cases";
 var selectedVar2 = "Daily Vaccinations";
+var selectedCountry = "World"
+var selectedCountryISO;
 var dropDown;
 var dropDown2;
+var dropDownCountry;
 //legend vars
 var lowColor = '#002fff'; //'#f9f9f9';
 var highColor = '#bc2a66';
@@ -150,6 +153,12 @@ function buildSlider() {
     .attr("y", 200)
     .on('change', onchange2);  
 
+  dropDownCountry = d3.select("body")
+    .append("select")
+    .attr("class", "country-search")
+    .attr("y", 200)
+    .on('change', onchangeCountry);
+
   var options = dropDown.selectAll("option")
    .data(dropDownChoices)
    .enter()
@@ -158,6 +167,12 @@ function buildSlider() {
 
   var options2 = dropDown2.selectAll("option")
     .data(dropDownChoices2)
+    .enter()
+    .append("option")
+     .text(function (d) {return d;});
+
+  var optionsCountry = dropDownCountry.selectAll("option")
+    .data(dropDownCountryChoices)
     .enter()
     .append("option")
      .text(function (d) {return d;});
@@ -191,6 +206,28 @@ function buildSlider() {
         .await(buildGraph);
     }
     }
+
+  function onchangeCountry(){
+    selectedCountry = d3.select('select.country-search').property('value');
+    selectedCountryISO = dropDownCountryVars[dropDownCountryChoices.indexOf(selectedCountry)]
+    graph1 = true;
+    graph2 = true;
+    if(selectedCountry == 'World')
+    {
+      queue()   // queue function loads all data asynchronously
+      .defer(d3.json, "/getTotalByDay") //data for the whole world
+      .defer(d3.json, "/getDetails")
+      .await(buildGraph);
+    }
+    else
+    {
+      queue()   // queue function loads all data asynchronously
+        .defer(d3.json, "/getTotalByDay?country_code="+selectedCountryISO)
+        .defer(d3.json, "/getDetails?country_code="+selectedCountryISO)
+        .await(buildGraph);
+    }
+  }
+
   svg = svg1.append("g")
     .attr("height", 500)
     .attr("width", 900)
