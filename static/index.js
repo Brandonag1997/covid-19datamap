@@ -140,6 +140,10 @@ function buildSlider() {
   //   .attr("width", width + margin.left + margin.right + 100)
   //   .attr("height", 150);
 
+  dropDownInfo = d3.select("body")
+    .append("p")
+    .attr("class","title1")
+    .text("Primary Graph");
 
   dropDown = d3.select("body")
     .append("select")
@@ -147,11 +151,21 @@ function buildSlider() {
     .attr("y", 200)
     .on('change', onchange);
 
+  dropDownInfo2 = d3.select("body")
+    .append("p")
+    .attr("class","title2")
+    .text("Secondary Graph");
+
   dropDown2 = d3.select("body")
     .append("select")
     .attr("class", "var-list2")
     .attr("y", 200)
     .on('change', onchange2);  
+
+  dropDownInfo2 = d3.select("body")
+    .append("p")
+    .attr("class","title3")
+    .text("Country Choice");
 
   dropDownCountry = d3.select("body")
     .append("select")

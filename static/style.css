@@ -96,7 +96,28 @@ select.var-list2 {
 select.country-search {
   position: absolute;
   top: 685px;
-  left: 600px;
+  left: 580px;
+}
+
+p.title1 {
+  color: #333;
+  position: absolute;
+  top: 610px;
+  left: -18px;
+}
+
+p.title2 {
+  color: #333;
+  position: absolute;
+  top: 610px;
+  left: 252px;
+}
+
+p.title3 {
+  color: #333;
+  position: absolute;
+  top: 610px;
+  left: 532px;
 }
 
 .sliderBox {
