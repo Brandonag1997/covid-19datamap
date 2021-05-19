@@ -26,23 +26,13 @@ let credentials = {
     };
 
 // Initialize Database
-let conn = mysql.createConnection({
+let conn = mysql.createPool({
     host: dbPass.host,
     user: dbPass.user,
     password: dbPass.password,
     port:dbPass.port,
     database: dbPass.database,
     multipleStatements: true
-});
-
-// Connect when server starts
-conn.connect(function(err) {
-	if (err) {
-		console.log("Error connecting to database...");
-		console.log(err);
-	} else {
-		console.log("Database successfully connected!");
-	}
 });
 
 let download = (url, path, callback) => {
@@ -53,9 +43,9 @@ let download = (url, path, callback) => {
   })
 };
 
-const url = 'https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/owid-covid-data.csv';
+const url = 'https://covid.ourworldindata.org/data/owid-covid-data.csv';
 const path = 'owid-covid-data.csv';
-const headerURL = 'https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/owid-covid-codebook.csv'
+const headerURL = 'https://covid.ourworldindata.org/data/owid-covid-codebook.csv'
 const headerPath = 'owid-covid-codebook.csv'
 
 function instertISO() {
@@ -65,26 +55,29 @@ function instertISO() {
   //need a better way to insert new data
   let q2 = "DROP TABLE iso;"
   let q3 = "CREATE TABLE iso(name TEXT, `alpha-3` TEXT, `country-code` TEXT);"
-  conn.query(q1, function(err) {
-      if (err) {
-        console.log("error creating temporary table");
-        console.log(err);
-      }
-    });
+  pool.getConnection(function(err, conn)
+  {
+    conn.query(q1, function(err) {
+        if (err) {
+          console.log("error creating temporary table");
+          console.log(err);
+        }
+      });
 
-  conn.query(q2, function(err) {
-      if (err) {
-        console.log("error dropping table, it probably doesn't exist");
-        console.log(err);
-      }
-    });
+    conn.query(q2, function(err) {
+        if (err) {
+          console.log("error dropping table, it probably doesn't exist");
+          console.log(err);
+        }
+      });
 
-  conn.query(q3, function(err) {
-      if (err) {
-        console.log("error creating table");
-        console.log(err);
-      }
-    });
+    conn.query(q3, function(err) {
+        if (err) {
+          console.log("error creating table");
+          console.log(err);
+        }
+      });
+    
 
   let csvData = [];
   let csvStream = fastcsv
@@ -126,6 +119,8 @@ function instertISO() {
         }
       });
   }
+  conn.release();
+  });
 }
 
 //get column names
@@ -135,24 +130,26 @@ function findColumns(){
   let setupQ = "SET SESSION group_concat_max_len = 100000"; //increase the max length of group_concat to fit all the column names
   let q1 = "DROP TABLE codebook;"
   let q2 = "CREATE TABLE codebook (column_id int NOT NULL AUTO_INCREMENT PRIMARY KEY, column_name VARCHAR(255), description TEXT, source TEXT);"
-  conn.query(setupQ, function(err) {
-    if (err){
-      console.log("error changing group_concat max length");
-      console.log(err);
-    }
-  })
-  conn.query(q1, function(err) {
-    if (err){
-      console.log("error dropping coodbook table");
-      console.log(err);
-    }
-  })
-  conn.query(q2, function(err) {
-    if (err){
-      console.log("error creating coodbook table");
-      console.log(err);
-    }
-  })
+  pool.getConnection(function(err, conn)
+  {
+    conn.query(setupQ, function(err) {
+      if (err){
+        console.log("error changing group_concat max length");
+        console.log(err);
+      }
+    })
+    conn.query(q1, function(err) {
+      if (err){
+        console.log("error dropping coodbook table");
+        console.log(err);
+      }
+    })
+    conn.query(q2, function(err) {
+      if (err){
+        console.log("error creating coodbook table");
+        console.log(err);
+      }
+    })
 
 
   let csvData = []; //var to hold codebook csv data
@@ -180,7 +177,8 @@ function findColumns(){
     console.log('Data downloaded...');
     updateDatabase(true);
   })
-
+  conn.release();
+});
 }
 
 //updating database
@@ -196,37 +194,40 @@ function updateDatabase(updateDetails) {
   let q3 = "CREATE TABLE world_data (iso_code CHAR(3), Country VARCHAR(100), Confirmed INT, Confirmed_last24h INT, Deaths INT, Deaths_last24h INT, total_vaccinations INT, people_vaccinated INT, people_fully_vaccinated INT, new_vaccinations INT, Date TEXT);"
   let q4 = "DROP TABLE country_details;"
   let q5 = "CREATE TABLE country_details (iso_code CHAR(3), population TEXT, population_density TEXT, median_age TEXT, hospital_beds_per_thousand TEXT, life_expectancy TEXT, PRIMARY KEY(iso_code));"
+  pool.getConnection(function(err, conn)
+  {
+    conn.query(qNames, function(err, rows, fields) {
+      if(err) {
+        console.log("errot getting column names");
+        console.log(err)
+        }
+      //console.log(rows)
+      outputNames = rows[0].names
+      let q1 ="CREATE TEMPORARY TABLE world_data_full (" + outputNames + ");"
+      conn.query(q1, function(err) {
+        if (err) {
+          console.log("error creating temporary table");
+          console.log(err);
+        }
+        //console.log(q1);
+      });
 
-  conn.query(qNames, function(err, rows, fields) {
-    if(err) {
-	    console.log("errot getting column names");
-	    console.log(err)
-      }
-    //console.log(rows)
-    outputNames = rows[0].names
-    let q1 ="CREATE TEMPORARY TABLE world_data_full (" + outputNames + ");"
-    conn.query(q1, function(err) {
-      if (err) {
-        console.log("error creating temporary table");
-        console.log(err);
-      }
-      //console.log(q1);
-    });
+      conn.query(q2, function(err) {
+        if (err) {
+          console.log("error dropping world_data table, it probably doesn't exist");
+          console.log(err);
+        }
+      });
 
-    conn.query(q2, function(err) {
-      if (err) {
-        console.log("error dropping world_data table, it probably doesn't exist");
-        console.log(err);
-      }
+      conn.query(q3, function(err) {
+        if (err) {
+          console.log("error creating world_data table");
+          console.log(err);
+        }
+      });
     });
+  // });
 
-    conn.query(q3, function(err) {
-      if (err) {
-        console.log("error creating world_data table");
-        console.log(err);
-      }
-    });
-  });
   let updateQuery;
   let csvData = []; //var to hold world csv data
   //input stream to insert data into world_data table
@@ -239,12 +240,12 @@ function updateDatabase(updateDetails) {
       csvData.shift(); // remove the first line: header
 
       let statement = "SELECT GROUP_CONCAT(T.column_name SEPARATOR ', ') AS names FROM (SELECT column_id, column_name FROM codebook ORDER BY column_id) AS T;"
-	    conn.query(statement,function(err, rows, fields) {
+      conn.query(statement,function(err, rows, fields) {
         if (err){
           console.log('Error during query select...' + err.sqlMessage);
         } else {
           let output = rows[0].names;
-	        updateQuery = "INSERT INTO world_data_full (" + output + ") VALUES ?"
+          updateQuery = "INSERT INTO world_data_full (" + output + ") VALUES ?"
         }
       //})
       conn.query(updateQuery, [csvData], function(err) {
@@ -257,7 +258,7 @@ function updateDatabase(updateDetails) {
         });
       insertData();
       //update detailed data about each country
-			if (updateDetails==true) {
+      if (updateDetails==true) {
         conn.query(q4, function(err) {
             if (err) {
               console.log("error dropping country_details table, it probably doesn't exist");
@@ -278,7 +279,7 @@ function updateDatabase(updateDetails) {
       //     console.log(error || response);
       //   });
       // save csvData
-	    })
+      })
     });
 
   stream.pipe(csvStream);
@@ -317,13 +318,13 @@ function updateDatabase(updateDetails) {
 			});
   }
   
-  
+  conn.release();});
 }
 
 function getCountryData() {
   let statement = "SELECT DISTINCT id_date.id AS id, DATE(IFNULL(W.Date,id_date.Date)) AS Date, IFNULL(W.Confirmed,0) AS Confirmed, IFNULL(W.Confirmed_last24h,0) AS Confirmed_last24h, IFNULL(W.Deaths,0) AS Deaths, IFNULL(W.Deaths_last24h,0) AS Deaths_last24h, IFNULL(W.total_vaccinations,0) AS total_vaccinations, IFNULL(W.people_vaccinated,0) AS people_vaccinated, IFNULL(W.people_fully_vaccinated,0) AS people_fully_vaccinated, IFNULL(W.new_vaccinations,0) AS vaccinations_last24h FROM world_data AS W RIGHT JOIN (SELECT I1.`country-code` AS ID, T1.Date AS Date, I1.`alpha-3` AS Name FROM (SELECT DISTINCT i.`alpha-3` AS id, w.Date as Date FROM iso AS i, world_data AS w) AS T1 INNER JOIN iso AS I1 ON T1.id = I1.`alpha-3`) AS id_date ON W.iso_code = id_date.Name AND W.Date = id_date.Date;"
 
-  conn.query(statement,function(err, rows, fields) {
+  pool.query(statement,function(err, rows, fields) {
       if (err) {
           console.log('Error during query select...' + err.sqlMessage);
       } else {
@@ -348,7 +349,7 @@ app.get("/countrydata", function(req, res){
 app.get("/dateRange", function(req, res){
     let statement = "SELECT Min(DATE(Date)) AS First_Day ,MAX(DATE(Date)) AS Last_Day FROM world_data;"
 
-    conn.query(statement,function(err, rows, fields) {
+    pool.query(statement,function(err, rows, fields) {
         if (err) {
             console.log('Error during query select...' + err.sqlMessage);
             res.json({"failed":"dateRange"}); res.status(500);
@@ -362,84 +363,84 @@ app.get("/dateRange", function(req, res){
 });
 
 app.get("/getMax", function(req, res){
-  let statement = "SELECT MAX(Confirmed) AS Confirmed, MAX(Confirmed_last24h) AS Confirmed_last24h, MAX(Deaths) AS Deaths, MAX(Deaths_last24h) AS Deaths_last24h, MAX(total_vaccinations) AS total_vaccinations, MAX(people_vaccinated) AS people_vaccinated, MAX(people_fully_vaccinated) AS people_fully_vaccinated, MAX(new_vaccinations) AS vaccinations_last24h FROM world_data WHERE Country!='World';"
+    let statement = "SELECT MAX(Confirmed) AS Confirmed, MAX(Confirmed_last24h) AS Confirmed_last24h, MAX(Deaths) AS Deaths, MAX(Deaths_last24h) AS Deaths_last24h, MAX(total_vaccinations) AS total_vaccinations, MAX(people_vaccinated) AS people_vaccinated, MAX(people_fully_vaccinated) AS people_fully_vaccinated, MAX(new_vaccinations) AS vaccinations_last24h FROM world_data WHERE Country!='World';"
 
-  conn.query(statement,function(err, rows, fields) {
-      if (err) {
-          console.log('Error during query select...' + err.sqlMessage);
-          res.json({"failed":"getMax"}); res.status(500);
+    pool.query(statement,function(err, rows, fields) {
+        if (err) {
+            console.log('Error during query select...' + err.sqlMessage);
+            res.json({"failed":"getMax"}); res.status(500);
 
-      } else {
-          let output = {"Confirmed": rows[0].Confirmed, "Confirmed_last24h": rows[0].Confirmed_last24h, "Deaths": rows[0].Deaths, "Deaths_last24h": rows[0].Deaths_last24h, "total_vaccinations": rows[0].total_vaccinations, "people_vaccinated": rows[0].people_vaccinated, "people_fully_vaccinated": rows[0].people_fully_vaccinated, "vaccinations_last24h": rows[0].vaccinations_last24h};
+        } else {
+            let output = {"Confirmed": rows[0].Confirmed, "Confirmed_last24h": rows[0].Confirmed_last24h, "Deaths": rows[0].Deaths, "Deaths_last24h": rows[0].Deaths_last24h, "total_vaccinations": rows[0].total_vaccinations, "people_vaccinated": rows[0].people_vaccinated, "people_fully_vaccinated": rows[0].people_fully_vaccinated, "vaccinations_last24h": rows[0].vaccinations_last24h};
 
-          res.json(output);
-      }
-  });
+            res.json(output);
+        }
+    });
 });
 
 app.get("/getTotalByDay", function(req, res){
-  let country_code = req.query.country_code;
-  let statement = "";
-  if (country_code) {
-    statement = "SELECT Date, Confirmed, Confirmed_last24h, Deaths, Deaths_last24h, total_vaccinations, people_vaccinated, people_fully_vaccinated, new_vaccinations AS vaccinations_last24h FROM world_data AS W INNER JOIN iso AS I ON I.`alpha-3` = W.iso_code WHERE I.`country-code`=" + `'${country_code}'` + " GROUP BY Date ORDER BY Date;"
-  } else {
-    statement = "SELECT Date, Confirmed, Confirmed_last24h, Deaths, Deaths_last24h, total_vaccinations, people_vaccinated, people_fully_vaccinated, new_vaccinations AS vaccinations_last24h FROM world_data WHERE country='World' GROUP BY Date ORDER BY Date;"
-  }
-  conn.query(statement,function(err, rows, fields) {
-      if (err) {
-          console.log('Error during query select...' + err.sqlMessage);
-          res.json({"failed":"getTotalByDay"}); res.status(500);
+    let country_code = req.query.country_code;
+    let statement = "";
+    if (country_code) {
+      statement = "SELECT Date, Confirmed, Confirmed_last24h, Deaths, Deaths_last24h, total_vaccinations, people_vaccinated, people_fully_vaccinated, new_vaccinations AS vaccinations_last24h FROM world_data AS W INNER JOIN iso AS I ON I.`alpha-3` = W.iso_code WHERE I.`country-code`=" + `'${country_code}'` + " GROUP BY Date ORDER BY Date;"
+    } else {
+      statement = "SELECT Date, Confirmed, Confirmed_last24h, Deaths, Deaths_last24h, total_vaccinations, people_vaccinated, people_fully_vaccinated, new_vaccinations AS vaccinations_last24h FROM world_data WHERE country='World' GROUP BY Date ORDER BY Date;"
+    }
+    pool.query(statement,function(err, rows, fields) {
+        if (err) {
+            console.log('Error during query select...' + err.sqlMessage);
+            res.json({"failed":"getTotalByDay"}); res.status(500);
 
-      } else {
-        let output = [];
-        for(let i = 0; i < rows.length; i++){
-          output.push({"Date": rows[i].Date, "Confirmed": rows[i].Confirmed, "Confirmed_last24h": rows[i].Confirmed_last24h, "Deaths": rows[i].Deaths, "Deaths_last24h": rows[i].Deaths_last24h, "total_vaccinations": rows[i].total_vaccinations, "people_vaccinated": rows[i].people_vaccinated, "people_fully_vaccinated": rows[i].people_fully_vaccinated, "vaccinations_last24h": rows[i].vaccinations_last24h});
+        } else {
+          let output = [];
+          for(let i = 0; i < rows.length; i++){
+            output.push({"Date": rows[i].Date, "Confirmed": rows[i].Confirmed, "Confirmed_last24h": rows[i].Confirmed_last24h, "Deaths": rows[i].Deaths, "Deaths_last24h": rows[i].Deaths_last24h, "total_vaccinations": rows[i].total_vaccinations, "people_vaccinated": rows[i].people_vaccinated, "people_fully_vaccinated": rows[i].people_fully_vaccinated, "vaccinations_last24h": rows[i].vaccinations_last24h});
+          }
+          res.json(output);
+
         }
-        res.json(output);
-
-      }
-  });
+    });
 });
 
 app.get("/getTotalMax", function(req, res){
-  let statement = "SELECT MAX(Confirmed) AS Confirmed, MAX(Confirmed_last24h) AS Confirmed_last24h, MAX(Deaths) AS Deaths, MAX(Deaths_last24h) AS Deaths_last24h, MAX(total_vaccinations) AS total_vaccinations, MAX(people_vaccinated) AS people_vaccinated, MAX(people_fully_vaccinated) AS people_fully_vaccinated, MAX(new_vaccinations) AS vaccinations_last24h FROM world_data;"
+    let statement = "SELECT MAX(Confirmed) AS Confirmed, MAX(Confirmed_last24h) AS Confirmed_last24h, MAX(Deaths) AS Deaths, MAX(Deaths_last24h) AS Deaths_last24h, MAX(total_vaccinations) AS total_vaccinations, MAX(people_vaccinated) AS people_vaccinated, MAX(people_fully_vaccinated) AS people_fully_vaccinated, MAX(new_vaccinations) AS vaccinations_last24h FROM world_data;"
 
-  conn.query(statement,function(err, rows, fields) {
-      if (err) {
-          console.log('Error during query select...' + err.sqlMessage);
-          res.json({"failed":"getTotalMax"}); res.status(500);
+    pool.query(statement,function(err, rows, fields) {
+        if (err) {
+            console.log('Error during query select...' + err.sqlMessage);
+            res.json({"failed":"getTotalMax"}); res.status(500);
 
-      } else {
-        let output = {"Confirmed": rows[0].Confirmed, "Confirmed_last24h": rows[0].Confirmed_last24h, "Deaths": rows[0].Deaths, "Deaths_last24h": rows[0].Deaths_last24h, "total_vaccinations": rows[0].total_vaccinations, "people_vaccinated": rows[0].people_vaccinated, "people_fully_vaccinated": rows[0].people_fully_vaccinated, "vaccinations_last24h": rows[0].vaccinations_last24h};
-        res.json(output);
+        } else {
+          let output = {"Confirmed": rows[0].Confirmed, "Confirmed_last24h": rows[0].Confirmed_last24h, "Deaths": rows[0].Deaths, "Deaths_last24h": rows[0].Deaths_last24h, "total_vaccinations": rows[0].total_vaccinations, "people_vaccinated": rows[0].people_vaccinated, "people_fully_vaccinated": rows[0].people_fully_vaccinated, "vaccinations_last24h": rows[0].vaccinations_last24h};
+          res.json(output);
 
-      }
-  });
+        }
+    });
 });
 
 app.get("/getDetails", function(req, res){
-  let country_code = req.query.country_code;
-  let statement = "";
-  if (country_code) {
-    statement = "SELECT population FROM country_details AS CD INNER JOIN iso AS I ON I.`alpha-3` = CD.iso_code WHERE I.`country-code`=" + `'${country_code}'` + ";"
-  } else {
-    statement = "SELECT 7762000000 as population;" //need to add better way to get world population
-    // statement = "SELECT Date, Confirmed, Confirmed_last24h, Deaths, Deaths_last24h FROM world_data WHERE country='World' GROUP BY Date ORDER BY Date;"
-  }
-  conn.query(statement,function(err, rows, fields) {
-      if (err) {
-          console.log('Error during query select...' + err.sqlMessage);
-          res.json({"failed":"getDetails"}); res.status(500);
+    let country_code = req.query.country_code;
+    let statement = "";
+    if (country_code) {
+      statement = "SELECT population FROM country_details AS CD INNER JOIN iso AS I ON I.`alpha-3` = CD.iso_code WHERE I.`country-code`=" + `'${country_code}'` + ";"
+    } else {
+      statement = "SELECT 7762000000 as population;" //need to add better way to get world population
+      // statement = "SELECT Date, Confirmed, Confirmed_last24h, Deaths, Deaths_last24h FROM world_data WHERE country='World' GROUP BY Date ORDER BY Date;"
+    }
+    pool.query(statement,function(err, rows, fields) {
+        if (err) {
+            console.log('Error during query select...' + err.sqlMessage);
+            res.json({"failed":"getDetails"}); res.status(500);
 
-      } else {
-        let output = [];
-        for(let i = 0; i < rows.length; i++){
-          output.push({"population": rows[i].population});
+        } else {
+          let output = [];
+          for(let i = 0; i < rows.length; i++){
+            output.push({"population": rows[i].population});
+          }
+          res.json(output);
+
         }
-        res.json(output);
-
-      }
-  });
+    });
 });
 
 // Only use static files from static folder
