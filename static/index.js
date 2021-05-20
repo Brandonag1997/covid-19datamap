@@ -173,6 +173,13 @@ function buildSlider() {
     .attr("y", 200)
     .on('change', onchangeCountry);
 
+  dataSource = d3.select("body")
+    .append("p")
+    .attr("class", "owid-source")
+    .html(`<b>Data Source: </b>` + `Hannah Ritchie, Esteban Ortiz-Ospina, Diana Beltekian, Edouard Mathieu, Joe Hasell, Bobbie Macdonald, Charlie Giattino, Cameron Appel, Lucas Rodés-Guirao and Max Roser (2020) - ` + "<br>" +` "Coronavirus Pandemic (COVID-19)". Published online at OurWorldInData.org. Retrieved from: `+ `<a href="https://ourworldindata.org/coronavirus">'https://ourworldindata.org/coronavirus'</a>` +` [Online Resource]`);
+    //    .href("")
+
+
   var options = dropDown.selectAll("option")
    .data(dropDownChoices)
    .enter()

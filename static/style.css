@@ -120,6 +120,13 @@ p.title3 {
   left: 532px;
 }
 
+p.owid-source {
+  color: #333;
+  position: absolute;
+  top: 700px;
+  left: -18px;
+}
+
 .sliderBox {
   position:absolute;
 	left:300px;
