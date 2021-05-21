@@ -26,7 +26,7 @@ let credentials = {
     };
 
 // Initialize Database
-let conn = mysql.createPool({
+let pool = mysql.createPool({
     host: dbPass.host,
     user: dbPass.user,
     password: dbPass.password,
