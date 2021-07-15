@@ -251,6 +251,7 @@ function updateDatabase(updateDetails) {
       conn.query(updateQuery, [csvData], function(err) {
           if (err) {
             console.log("error inserting csv data");
+            console.log(updateQuery);
             console.log(err);
           } else {
             console.log("data import successful...");
@@ -459,10 +460,10 @@ httpServer.listen(3000, () => {
 
 getCountryData();
 //data downloaded and inserted into database at 8:01 AM
-var j = schedule.schedule('01 12 * * *', function(){
+//var j = schedule.schedule('01 12 * * *', function(){
   console.log("Updating database...");
   download(headerURL, headerPath, () => {
     findColumns();
   })
   //instertISO();
-});
+//});
