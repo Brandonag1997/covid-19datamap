@@ -85,7 +85,7 @@ function dateCallback(error, data, maxData, maxTotals) {
 
   startingValue = new Date(data['First_Day'].replace(/-/g, '\/').replace(/T.+/, ''))
   endingValue = new Date(data['Last_Day'].replace(/-/g, '\/').replace(/T.+/, ''))
-  endingValue.setDate(endingValue.getDate() - 1) //for d3 scale
+  endingValue.setDate(endingValue.getDate() - 0) //for d3 scale
   maxConfirmed = maxData['Confirmed']
   maxConfirmed_last24h = maxData['Confirmed_last24h']
   maxDeaths = maxData['Deaths']
