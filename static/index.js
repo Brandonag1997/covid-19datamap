@@ -51,7 +51,7 @@ var graph2 = true;
 var plot; //the svg for the barchart
 var plot2; //the svg for the vaccine barchart
 var heightG = 220;
-var widthG = 550;
+var widthG = 600;
 var formatDateG = d3.time.format("%b-%Y");
 var tipG; //tooltip for barchart
 var formatDateToolTip = d3.time.format("%d-%b-%Y");
