@@ -51,7 +51,7 @@ var graph2 = true;
 var plot; //the svg for the barchart
 var plot2; //the svg for the vaccine barchart
 var heightG = 220;
-var widthG = 600;
+var widthG = 900;
 var formatDateG = d3.time.format("%b-%Y");
 var tipG; //tooltip for barchart
 var formatDateToolTip = d3.time.format("%d-%b-%Y");
@@ -82,7 +82,6 @@ queue()   // queue function loads all data asynchronously
   .await(dateCallback);
 }
 function dateCallback(error, data, maxData, maxTotals) {
-
   startingValue = new Date(data['First_Day'].replace(/-/g, '\/').replace(/T.+/, ''))
   endingValue = new Date(data['Last_Day'].replace(/-/g, '\/').replace(/T.+/, ''))
   endingValue.setDate(endingValue.getDate() - 0) //for d3 scale
@@ -94,7 +93,7 @@ function dateCallback(error, data, maxData, maxTotals) {
   maxTotalConfirmed_last24h = maxTotals['Confirmed_last24h']
   maxTotalDeaths = maxTotals['Deaths']
   maxTotalDeaths_last24h = maxTotals['Deaths_last24h']
-
+  
   maxtotal_vaccinations = maxData['total_vaccinations']
   maxTotaltotal_vaccinations = maxTotals['total_vaccinations']
   maxpeople_vaccinated = maxData['people_vaccinated']
@@ -106,7 +105,7 @@ function dateCallback(error, data, maxData, maxTotals) {
   // ramp = d3.scale.linear().domain([0,maxConfirmed/4,2*maxConfirmed/4,3*maxConfirmed/4,maxConfirmed]).range(["#ca0020", "#f4a582", "#f7f7f7", "#92c5de", "#0571b0"]);
   ramp = d3.scale.log().clamp(true).domain([1,maxConfirmed]).range([lowColor,highColor]).nice()
   ramp2 = d3.scale.log().clamp(true).domain([1,maxtotal_vaccinations]).range([lowColor,highColor]).nice()
-
+  
   buildSlider();
   updatePage(selectedVar)
   // buildLegend();
@@ -531,8 +530,8 @@ function buildGraph(error, totals, details) {
     plot = d3.select("body")
       .append("svg")
         .attr("id","bar_graph")
-        .attr("width", 700)
-        .attr("height", 460)
+        .attr("width", 950)
+        .attr("height", 490)
         .attr("transform", "translate(0," + -70 + ")")
         .attr("class", "graph");
   }
@@ -542,8 +541,8 @@ function buildGraph(error, totals, details) {
     plot2 = d3.select("body")
       .append("svg")
         .attr("id","bar_graph2")
-        .attr("width", 700)
-        .attr("height", 460)
+        .attr("width", 950)
+        .attr("height", 490)
         .attr("transform", "translate(0," + 300 + ")")
         .attr("class", "graph");
   }
