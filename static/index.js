@@ -51,7 +51,7 @@ var graph2 = true;
 var plot; //the svg for the barchart
 var plot2; //the svg for the vaccine barchart
 var heightG = 220;
-var widthG = 900;
+var widthG = 950;
 var formatDateG = d3.time.format("%b-%Y");
 var tipG; //tooltip for barchart
 var formatDateToolTip = d3.time.format("%d-%b-%Y");
@@ -530,7 +530,7 @@ function buildGraph(error, totals, details) {
     plot = d3.select("body")
       .append("svg")
         .attr("id","bar_graph")
-        .attr("width", 950)
+        .attr("width", 1100)
         .attr("height", 490)
         .attr("transform", "translate(0," + -70 + ")")
         .attr("class", "graph");
@@ -541,7 +541,7 @@ function buildGraph(error, totals, details) {
     plot2 = d3.select("body")
       .append("svg")
         .attr("id","bar_graph2")
-        .attr("width", 950)
+        .attr("width", 1100)
         .attr("height", 490)
         .attr("transform", "translate(0," + 300 + ")")
         .attr("class", "graph");
@@ -983,7 +983,6 @@ function processData(error,world,countryData) {
 }
 
 function drawMap(world) {
-
   svg.selectAll(".country")   // select country objects (which don't exist yet)
     .data(topojson.feature(world, world.objects.countries).features)  // bind data to these non-existent objects
     .enter().append("path") // prepare data to be appended to paths

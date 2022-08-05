@@ -337,6 +337,7 @@ function getCountryData() {
           }
           output[rows[i].id].push({"date": rows[i].Date, "cases": rows[i].Confirmed, "cases_last24": rows[i].Confirmed_last24h, "deaths": rows[i].Deaths, "deaths_last24": rows[i].Deaths_last24h, "total_vaccinations": rows[i].total_vaccinations, "people_vaccinated": rows[i].people_vaccinated, "people_fully_vaccinated": rows[i].people_fully_vaccinated, "vaccinations_last24h": rows[i].vaccinations_last24h});
         }
+	console.log(output)
         countryData = output;
         console.log('country data cached');
       }
