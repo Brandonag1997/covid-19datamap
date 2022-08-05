@@ -129,7 +129,7 @@ function findColumns(){
   let stream = fs.createReadStream("owid-covid-codebook.csv"); //file that contains column names and descriptions
   let setupQ = "SET SESSION group_concat_max_len = 100000"; //increase the max length of group_concat to fit all the column names
   let q1 = "DROP TABLE codebook;"
-  let q2 = "CREATE TABLE codebook (column_id int NOT NULL AUTO_INCREMENT PRIMARY KEY, column_name VARCHAR(255), description TEXT, source TEXT);"
+  let q2 = "CREATE TABLE codebook (column_id int NOT NULL AUTO_INCREMENT PRIMARY KEY, column_name VARCHAR(255), source TEXT, category TEXT, description TEXT);"
   pool.getConnection(function(err, conn)
   {
     conn.query(setupQ, function(err) {
@@ -161,7 +161,7 @@ function findColumns(){
     })
     .on("end", function() {
       csvData.shift();
-      let updateQuery = "INSERT INTO codebook (column_name, description, source) VALUES ?";
+      let updateQuery = "INSERT INTO codebook (column_name, source, category, description) VALUES ?";
       conn.query(updateQuery, [csvData], function(err) {
         if (err) {
           console.log(err);
@@ -251,7 +251,7 @@ function updateDatabase(updateDetails) {
       conn.query(updateQuery, [csvData], function(err) {
           if (err) {
             console.log("error inserting csv data");
-            console.log(updateQuery);
+            //console.log(updateQuery);
             console.log(err);
           } else {
             console.log("data import successful...");
@@ -337,6 +337,7 @@ function getCountryData() {
           }
           output[rows[i].id].push({"date": rows[i].Date, "cases": rows[i].Confirmed, "cases_last24": rows[i].Confirmed_last24h, "deaths": rows[i].Deaths, "deaths_last24": rows[i].Deaths_last24h, "total_vaccinations": rows[i].total_vaccinations, "people_vaccinated": rows[i].people_vaccinated, "people_fully_vaccinated": rows[i].people_fully_vaccinated, "vaccinations_last24h": rows[i].vaccinations_last24h});
         }
+	//console.log(output)
         countryData = output;
         console.log('country data cached');
       }
