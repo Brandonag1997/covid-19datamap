@@ -1,6 +1,6 @@
 //global vars
-var newVar = "Confirmed_last24h";
-var newVar2 = "vaccinations_last24h";
+var currentPrimaryMetric = "Confirmed_last24h";
+var currentSecondaryMetric = "vaccinations_last24h";
 var projection,
   path,
   graticule,
@@ -32,18 +32,6 @@ var handle, slider, sliderBox, brush, button, svg, x, xaxis;
 let worldDataSaved = null;
 let countryDataSaved = null;
 //dropdown vars
-var dropDownChoices = [
-  "Daily Confirmed Cases",
-  "Total Confirmed Cases",
-  "Daily Deaths",
-  "Total Deaths",
-];
-var dropDownChoices2 = [
-  "Daily Vaccinations",
-  "Total Vaccinations",
-  "People Vaccinated",
-  "People Fully Vaccinated",
-];
 var dropDownCountryChoices = [
   "World",
   "Afghanistan",
@@ -265,18 +253,21 @@ var dropDownCountryChoices = [
   "Zambia",
   "Zimbabwe",
 ];
-var dropDownVars = [
-  "Confirmed_last24h",
-  "Confirmed",
-  "Deaths_last24h",
-  "Deaths",
-];
-var dropDownVars2 = [
-  "vaccinations_last24h",
-  "total_vaccinations",
-  "people_vaccinated",
-  "people_fully_vaccinated",
-];
+const metrics = {
+  primary: {
+    "Daily Confirmed Cases": "Confirmed_last24h",
+    "Total Confirmed Cases": "Confirmed",
+    "Daily Deaths": "Deaths_last24h",
+    "Total Deaths": "Deaths",
+  },
+  secondary: {
+    "Daily Vaccinations": "vaccinations_last24h",
+    "Total Vaccinations": "total_vaccinations",
+    "People Vaccinated": "people_vaccinated",
+    "People Fully Vaccinated": "people_fully_vaccinated",
+  },
+};
+
 var dropDownCountryVars = [
   "",
   "004",
@@ -498,8 +489,8 @@ var dropDownCountryVars = [
   "894",
   "716",
 ];
-var selectedVar = "Daily Confirmed Cases";
-var selectedVar2 = "Daily Vaccinations";
+var selectedPrimaryMetricName = "Daily Confirmed Cases";
+var selectedSecondaryMetricName = "Daily Vaccinations";
 var selectedCountry = "World";
 var selectedCountryISO;
 var dropDown;
@@ -510,18 +501,36 @@ var lowColor = "#002fff"; //'#f9f9f9';
 var highColor = "#bc2a66";
 var w = 140,
   h = 500;
-var maxConfirmed, maxConfirmed_last24h, maxDeaths, maxDeaths_last24h;
-var maxtotal_vaccinations,
-  maxpeople_vaccinated,
-  maxpeople_fully_vaccinated,
-  maxvaccinations_last24h;
+
+const maxValues = {
+  country: {
+    Confirmed: 0,
+    Confirmed_last24h: 0,
+    Deaths: 0,
+    Deaths_last24h: 0,
+    total_vaccinations: 0,
+    people_vaccinated: 0,
+    people_fully_vaccinated: 0,
+    vaccinations_last24h: 0,
+  },
+  world: {
+    Confirmed: 0,
+    Confirmed_last24h: 0,
+    Deaths: 0,
+    Deaths_last24h: 0,
+    total_vaccinations: 0,
+    people_vaccinated: 0,
+    people_fully_vaccinated: 0,
+    vaccinations_last24h: 0,
+  },
+};
 var key, legend, y, yaxis;
-var ramp;
+var ramp, ramp2;
 var formatLegend = d3.format(".0f");
 // var ticks;
 //graph vars
-var graph1 = true;
-var graph2 = true;
+var updatePrimaryGraph = true;
+var updateSecondaryGraph = true;
 var plot; //the svg for the barchart
 var plot2; //the svg for the vaccine barchart
 var heightG = 220;
@@ -531,14 +540,6 @@ var tipG; //tooltip for barchart
 var formatDateToolTip = d3.time.format("%d-%b-%Y");
 var graphData;
 var maxVar, maxVar2;
-var maxTotalConfirmed,
-  maxTotalConfirmed_last24h,
-  maxTotalDeaths,
-  maxTotalDeaths_last24h;
-var maxTotaltotal_vaccinations,
-  maxTotalpeople_vaccinated,
-  maxTotalpeople_fully_vaccinated,
-  maxTotalvaccinations_last24h;
 
 //Tool tips to see data
 var format = d3.format(",");
@@ -554,7 +555,7 @@ var tip = d3
       d.properties.name +
       "<br></span>" +
       "<strong>" +
-      selectedVar +
+      selectedPrimaryMetricName +
       ": </strong><span class='details'>" +
       format(d.properties[attributeArray[currentAttribute]]) +
       "</span>"
@@ -578,41 +579,43 @@ function dateCallback(error, data, maxData, maxTotals) {
     data["Last_Day"].replace(/-/g, "\/").replace(/T.+/, ""),
   );
   endingValue.setDate(endingValue.getDate() - 0); //for d3 scale
-  maxConfirmed = maxData["Confirmed"];
-  maxConfirmed_last24h = maxData["Confirmed_last24h"];
-  maxDeaths = maxData["Deaths"];
-  maxDeaths_last24h = maxData["Deaths_last24h"];
-  maxTotalConfirmed = maxTotals["Confirmed"];
-  maxTotalConfirmed_last24h = maxTotals["Confirmed_last24h"];
-  maxTotalDeaths = maxTotals["Deaths"];
-  maxTotalDeaths_last24h = maxTotals["Deaths_last24h"];
+  maxValues.country.Confirmed = maxData["Confirmed"];
+  maxValues.country.Confirmed_last24h = maxData["Confirmed_last24h"];
+  maxValues.country.Deaths = maxData["Deaths"];
+  maxValues.country.Deaths_last24h = maxData["Deaths_last24h"];
+  maxValues.country.total_vaccinations = maxData["total_vaccinations"];
+  maxValues.country.people_vaccinated = maxData["people_vaccinated"];
+  maxValues.country.people_fully_vaccinated =
+    maxData["people_fully_vaccinated"];
+  maxValues.country.vaccinations_last24h = maxData["vaccinations_last24h"];
 
-  maxtotal_vaccinations = maxData["total_vaccinations"];
-  maxTotaltotal_vaccinations = maxTotals["total_vaccinations"];
-  maxpeople_vaccinated = maxData["people_vaccinated"];
-  maxTotalpeople_vaccinated = maxTotals["people_vaccinated"];
-  maxpeople_fully_vaccinated = maxData["people_fully_vaccinated"];
-  maxTotalpeople_fully_vaccinated = maxTotals["people_fully_vaccinated"];
-  maxvaccinations_last24h = maxData["vaccinations_last24h"];
-  maxTotalvaccinations_last24h = maxTotals["vaccinations_last24h"];
-  // ramp = d3.scale.linear().domain([0,maxConfirmed/4,2*maxConfirmed/4,3*maxConfirmed/4,maxConfirmed]).range(["#ca0020", "#f4a582", "#f7f7f7", "#92c5de", "#0571b0"]);
+  maxValues.world.Confirmed = maxTotals["Confirmed"];
+  maxValues.world.Confirmed_last24h = maxTotals["Confirmed_last24h"];
+  maxValues.world.Deaths = maxTotals["Deaths"];
+  maxValues.world.Deaths_last24h = maxTotals["Deaths_last24h"];
+  maxValues.world.total_vaccinations = maxTotals["total_vaccinations"];
+  maxValues.world.people_vaccinated = maxTotals["people_vaccinated"];
+  maxValues.world.people_fully_vaccinated =
+    maxTotals["people_fully_vaccinated"];
+  maxValues.world.vaccinations_last24h = maxTotals["vaccinations_last24h"];
+
   ramp = d3.scale
     .log()
     .clamp(true)
-    .domain([1, maxConfirmed])
+    .domain([1, maxValues.country.Confirmed])
     .range([lowColor, highColor])
     .nice();
   ramp2 = d3.scale
     .log()
     .clamp(true)
-    .domain([1, maxtotal_vaccinations])
+    .domain([1, maxValues.country.total_vaccinations])
     .range([lowColor, highColor])
     .nice();
 
   buildSlider();
-  updatePage(selectedVar);
+  updatePage(selectedPrimaryMetricName);
   // buildLegend();
-  // buildGraph('World', selectedVar);
+  // buildGraph('World', selectedPrimaryMetricName);
   // setMap();
 }
 
@@ -637,7 +640,7 @@ function buildSlider() {
     .attr("x", 150)
     .attr("y", 30)
     .style("font-size", "36px")
-    .text("COVID-19 Map (" + selectedVar + ")");
+    .text("COVID-19 Map (" + selectedPrimaryMetricName + ")");
 
   // svg1.append("svg")
   //   .attr("id","svgBox")
@@ -699,7 +702,7 @@ function buildSlider() {
 
   var options = dropDown
     .selectAll("option")
-    .data(dropDownChoices)
+    .data(Object.keys(metrics.primary))
     .enter()
     .append("option")
     .text(function (d) {
@@ -708,7 +711,7 @@ function buildSlider() {
 
   var options2 = dropDown2
     .selectAll("option")
-    .data(dropDownChoices2)
+    .data(Object.keys(metrics.secondary))
     .enter()
     .append("option")
     .text(function (d) {
@@ -725,18 +728,20 @@ function buildSlider() {
     });
 
   function onchange() {
-    graph1 = true;
-    graph2 = true;
-    selectedVar = d3.select("select.var-list").property("value");
-    newVar = dropDownVars[dropDownChoices.indexOf(selectedVar)];
+    updatePrimaryGraph = true;
+    updateSecondaryGraph = true;
+    selectedPrimaryMetricName = d3.select("select.var-list").property("value");
+    currentPrimaryMetric = metrics.primary[selectedPrimaryMetricName];
     selectedCountry = "World";
-    updatePage(newVar);
+    updatePage(currentPrimaryMetric);
   }
 
   function onchange2() {
-    graph2 = true;
-    selectedVar2 = d3.select("select.var-list2").property("value");
-    newVar2 = dropDownVars2[dropDownChoices2.indexOf(selectedVar2)];
+    updateSecondaryGraph = true;
+    selectedSecondaryMetricName = d3
+      .select("select.var-list2")
+      .property("value");
+    currentSecondaryMetric = metrics.secondary[selectedSecondaryMetricName];
 
     if (selectedCountry == "World") {
       queue() // queue function loads all data asynchronously
@@ -755,8 +760,8 @@ function buildSlider() {
     selectedCountry = d3.select("select.country-search").property("value");
     selectedCountryISO =
       dropDownCountryVars[dropDownCountryChoices.indexOf(selectedCountry)];
-    graph1 = true;
-    graph2 = true;
+    updatePrimaryGraph = true;
+    updateSecondaryGraph = true;
     if (selectedCountry == "World") {
       queue() // queue function loads all data asynchronously
         .defer(d3.json, "/getTotalByDay") //data for the whole world
@@ -779,16 +784,6 @@ function buildSlider() {
   ////slider code
   //brush for slider
   brush = d3.svg.brush().x(x).extent([startingValue, startingValue]);
-  // .extent([endingValue, endingValue])
-
-  // var svgBox = d3.select("body")
-  //     .append("svg")
-  //       // .attr("x",-200)
-  //       // .attr("y", -200)
-  //       // .attr("transform", "translate(" + -100 + ","
-  //       //                                 + -100 + ")")
-  //       .attr("width", width + margin.left + margin.right + 100)
-  //       .attr("height", 150);
 
   //sliderBox = svgBox
   backGroundBox = svg1
@@ -844,7 +839,7 @@ function buildSlider() {
     .text("Play");
 }
 
-function updatePage(newVar) {
+function updatePage(currentPrimaryMetric) {
   buildLegend();
   queue() // queue function loads all data asynchronously
     .defer(d3.json, "/getTotalByDay") //data for the whole world
@@ -853,7 +848,7 @@ function updatePage(newVar) {
   setMap();
 }
 
-//build legend using varibale specified in newVar
+//build legend using varibale specified in currentPrimaryMetric
 function buildLegend() {
   d3.select("#legend_id").remove();
 
@@ -894,73 +889,20 @@ function buildLegend() {
     .style("fill", "url(#gradient)")
     .attr("transform", "translate(0,10)");
 
-  if (newVar == "Confirmed") {
-    ramp = d3.scale
+  function createRamp(maxData) {
+    return d3.scale
       .log()
       .clamp(true)
-      .domain([1, maxConfirmed])
+      .domain([1, maxData])
       .range([lowColor, highColor])
       .nice();
-    maxVar = maxConfirmed;
-  } else if (newVar == "Confirmed_last24h") {
-    ramp = d3.scale
-      .log()
-      .clamp(true)
-      .domain([1, maxConfirmed_last24h])
-      .range([lowColor, highColor])
-      .nice();
-    maxVar = maxConfirmed_last24h;
-  } else if (newVar == "Deaths") {
-    ramp = d3.scale
-      .log()
-      .clamp(true)
-      .domain([1, maxDeaths])
-      .range([lowColor, highColor])
-      .nice();
-    maxVar = maxDeaths;
-  } else if (newVar == "Deaths_last24h") {
-    ramp = d3.scale
-      .log()
-      .clamp(true)
-      .domain([1, maxDeaths_last24h])
-      .range([lowColor, highColor])
-      .nice();
-    maxVar = maxDeaths_last24h;
   }
 
-  if (newVar2 == "total_vaccinations") {
-    ramp2 = d3.scale
-      .log()
-      .clamp(true)
-      .domain([1, maxtotal_vaccinations])
-      .range([lowColor, highColor])
-      .nice();
-    maxVar2 = maxtotal_vaccinations;
-  } else if (newVar2 == "vaccinations_last24h") {
-    ramp2 = d3.scale
-      .log()
-      .clamp(true)
-      .domain([1, maxvaccinations_last24h])
-      .range([lowColor, highColor])
-      .nice();
-    maxVar2 = maxvaccinations_last24h;
-  } else if (newVar2 == "people_fully_vaccinated") {
-    ramp2 = d3.scale
-      .log()
-      .clamp(true)
-      .domain([1, maxpeople_fully_vaccinated])
-      .range([lowColor, highColor])
-      .nice();
-    maxVar2 = maxpeople_fully_vaccinated;
-  } else if (newVar2 == "people_vaccinated") {
-    ramp2 = d3.scale
-      .log()
-      .clamp(true)
-      .domain([1, maxpeople_vaccinated])
-      .range([lowColor, highColor])
-      .nice();
-    maxVar2 = maxpeople_vaccinated;
-  }
+  ramp = createRamp(maxValues.country[currentPrimaryMetric]);
+  maxVar = maxValues.country[currentPrimaryMetric];
+  ramp2 = createRamp(maxValues.country[currentSecondaryMetric]);
+  maxVar2 = maxValues.country[currentSecondaryMetric];
+
   y = d3.scale.log().range([h, 0]).domain([1, maxVar]);
 
   yaxis = d3.svg
@@ -993,17 +935,18 @@ function buildGraph(error, totals, details) {
 
   var xG, yG, xAxisG, yAxisG;
   var xG2, yG2, xAxisG2, yAxisG2;
-  if (graph1) {
-    if (newVar == "Confirmed") {
-      maxVar = maxTotalConfirmed;
-    } else if (newVar == "Confirmed_last24h") {
-      maxVar = maxTotalConfirmed_last24h;
-    } else if (newVar == "Deaths") {
-      maxVar = maxTotalDeaths;
-    } else if (newVar == "Deaths_last24h") {
-      maxVar = maxTotalDeaths_last24h;
-    }
-
+  if (updatePrimaryGraph) {
+    maxVar = maxValues.world[currentPrimaryMetric];
+    /*
+    if (currentPrimaryMetric == "Confirmed") {
+      maxVar = maxValues.world.Confirmed;
+    } else if (currentPrimaryMetric == "Confirmed_last24h") {
+      maxVar = maxValues.world.Confirmed_last24h;
+    } else if (currentPrimaryMetric == "Deaths") {
+      maxVar = maxValues.world.Deaths;
+    } else if (currentPrimaryMetric == "Deaths_last24h") {
+      maxVar = maxValues.world.Deaths_last24h;
+    }*/
     xG = d3.scale.ordinal().rangeRoundBands([0, widthG], 0.05);
     yG = d3.scale.linear().domain([0, maxVar]).range([heightG, 0]);
 
@@ -1023,15 +966,15 @@ function buildGraph(error, totals, details) {
 
     yAxisG = d3.svg.axis().scale(yG).orient("left").ticks(10);
   }
-  if (graph2) {
-    if (newVar2 == "total_vaccinations") {
-      maxVar2 = maxTotaltotal_vaccinations;
-    } else if (newVar2 == "vaccinations_last24h") {
-      maxVar2 = maxTotalvaccinations_last24h;
-    } else if (newVar2 == "people_fully_vaccinated") {
-      maxVar2 = maxTotalpeople_fully_vaccinated;
-    } else if (newVar2 == "people_vaccinated") {
-      maxVar2 = maxTotalpeople_vaccinated;
+  if (updateSecondaryGraph) {
+    if (currentSecondaryMetric == "total_vaccinations") {
+      maxVar2 = maxValues.world.total_vaccinations;
+    } else if (currentSecondaryMetric == "vaccinations_last24h") {
+      maxVar2 = maxValues.world.vaccinations_last24h;
+    } else if (currentSecondaryMetric == "people_fully_vaccinated") {
+      maxVar2 = maxValues.world.people_fully_vaccinated;
+    } else if (currentSecondaryMetric == "people_vaccinated") {
+      maxVar2 = maxValues.world.people_vaccinated;
     }
 
     xG2 = d3.scale.ordinal().rangeRoundBands([0, widthG], 0.05);
@@ -1053,28 +996,26 @@ function buildGraph(error, totals, details) {
 
     yAxisG2 = d3.svg.axis().scale(yG2).orient("left").ticks(10);
   }
-  // console.log(newVar);
-  // console.log(maxVar);
 
-  if (graph1) {
-    d3.select("#bar_graph").remove();
+  if (updatePrimaryGraph) {
+    d3.select("#primary_bar_graph").remove();
 
     plot = d3
       .select("body")
       .append("svg")
-      .attr("id", "bar_graph")
+      .attr("id", "primary_bar_graph")
       .attr("width", 1100)
       .attr("height", 490)
       .attr("transform", "translate(0," + -70 + ")")
       .attr("class", "graph");
   }
-  if (graph2) {
-    d3.select("#bar_graph2").remove();
+  if (updateSecondaryGraph) {
+    d3.select("#secondary_bar_graph").remove();
 
     plot2 = d3
       .select("body")
       .append("svg")
-      .attr("id", "bar_graph2")
+      .attr("id", "secondary_bar_graph")
       .attr("width", 1100)
       .attr("height", 490)
       .attr("transform", "translate(0," + 300 + ")")
@@ -1100,34 +1041,35 @@ function buildGraph(error, totals, details) {
   // lastDayG.setDate(lastDayG.getDate() + 1);
   // xGdomain.push(lastDayG);
   // xG.domain(xGdomain);
-  if (graph1) {
+  if (updatePrimaryGraph) {
     xG.domain(
       graphData.map(function (d) {
         return d.Date;
       }),
     );
-    if (newVar == "Confirmed") {
+    if (currentPrimaryMetric == "Confirmed") {
+      //fixme remove if/elseif
       yG.domain([
         0,
         d3.max(graphData, function (d) {
           return d.Confirmed;
         }),
       ]);
-    } else if (newVar == "Confirmed_last24h") {
+    } else if (currentPrimaryMetric == "Confirmed_last24h") {
       yG.domain([
         0,
         d3.max(graphData, function (d) {
           return d.Confirmed_last24h;
         }),
       ]);
-    } else if (newVar == "Deaths") {
+    } else if (currentPrimaryMetric == "Deaths") {
       yG.domain([
         0,
         d3.max(graphData, function (d) {
           return d.Deaths;
         }),
       ]);
-    } else if (newVar == "Deaths_last24h") {
+    } else if (currentPrimaryMetric == "Deaths_last24h") {
       yG.domain([
         0,
         d3.max(graphData, function (d) {
@@ -1137,34 +1079,34 @@ function buildGraph(error, totals, details) {
     }
   }
 
-  if (graph2) {
+  if (updateSecondaryGraph) {
     xG2.domain(
       graphData.map(function (d) {
         return d.Date;
       }),
     );
-    if (newVar2 == "total_vaccinations") {
+    if (currentSecondaryMetric == "total_vaccinations") {
       yG2.domain([
         0,
         d3.max(graphData, function (d) {
           return d.total_vaccinations;
         }),
       ]);
-    } else if (newVar2 == "vaccinations_last24h") {
+    } else if (currentSecondaryMetric == "vaccinations_last24h") {
       yG2.domain([
         0,
         d3.max(graphData, function (d) {
           return d.vaccinations_last24h;
         }),
       ]);
-    } else if (newVar2 == "people_fully_vaccinated") {
+    } else if (currentSecondaryMetric == "people_fully_vaccinated") {
       yG2.domain([
         0,
         d3.max(graphData, function (d) {
           return d.people_fully_vaccinated;
         }),
       ]);
-    } else if (newVar2 == "people_vaccinated") {
+    } else if (currentSecondaryMetric == "people_vaccinated") {
       yG2.domain([
         0,
         d3.max(graphData, function (d) {
@@ -1180,46 +1122,46 @@ function buildGraph(error, totals, details) {
     .offset([-10, 0])
     .html(function (d) {
       //need to find a better way to do this
-      if (newVar == "Confirmed") {
+      if (currentPrimaryMetric == "Confirmed") {
         return (
           "<span>" +
           formatDateToolTip(d.Date) +
           "<br></span>" +
           "<strong>" +
-          selectedVar +
+          selectedPrimaryMetricName +
           ":</strong> <span style='color:red'>" +
           d.Confirmed +
           "</span>"
         );
-      } else if (newVar == "Confirmed_last24h") {
+      } else if (currentPrimaryMetric == "Confirmed_last24h") {
         return (
           "<span>" +
           formatDateToolTip(d.Date) +
           "<br></span>" +
           "<strong>" +
-          selectedVar +
+          selectedPrimaryMetricName +
           ":</strong> <span style='color:red'>" +
           d.Confirmed_last24h +
           "</span>"
         );
-      } else if (newVar == "Deaths") {
+      } else if (currentPrimaryMetric == "Deaths") {
         return (
           "<span>" +
           formatDateToolTip(d.Date) +
           "<br></span>" +
           "<strong>" +
-          selectedVar +
+          selectedPrimaryMetricName +
           ":</strong> <span style='color:red'>" +
           d.Deaths +
           "</span>"
         );
-      } else if (newVar == "Deaths_last24h") {
+      } else if (currentPrimaryMetric == "Deaths_last24h") {
         return (
           "<span>" +
           formatDateToolTip(d.Date) +
           "<br></span>" +
           "<strong>" +
-          selectedVar +
+          selectedPrimaryMetricName +
           ":</strong> <span style='color:red'>" +
           d.Deaths_last24h +
           "</span>"
@@ -1235,46 +1177,46 @@ function buildGraph(error, totals, details) {
     .offset([-10, 0])
     .html(function (d) {
       //need to find a better way to do this
-      if (newVar2 == "total_vaccinations") {
+      if (currentSecondaryMetric == "total_vaccinations") {
         return (
           "<span>" +
           formatDateToolTip(d.Date) +
           "<br></span>" +
           "<strong>" +
-          selectedVar2 +
+          selectedSecondaryMetricName +
           ":</strong> <span style='color:red'>" +
           d.total_vaccinations +
           "</span>"
         );
-      } else if (newVar2 == "vaccinations_last24h") {
+      } else if (currentSecondaryMetric == "vaccinations_last24h") {
         return (
           "<span>" +
           formatDateToolTip(d.Date) +
           "<br></span>" +
           "<strong>" +
-          selectedVar2 +
+          selectedSecondaryMetricName +
           ":</strong> <span style='color:red'>" +
           d.vaccinations_last24h +
           "</span>"
         );
-      } else if (newVar2 == "people_fully_vaccinated") {
+      } else if (currentSecondaryMetric == "people_fully_vaccinated") {
         return (
           "<span>" +
           formatDateToolTip(d.Date) +
           "<br></span>" +
           "<strong>" +
-          selectedVar2 +
+          selectedSecondaryMetricName +
           ":</strong> <span style='color:red'>" +
           d.people_fully_vaccinated +
           "</span>"
         );
-      } else if (newVar2 == "people_vaccinated") {
+      } else if (currentSecondaryMetric == "people_vaccinated") {
         return (
           "<span>" +
           formatDateToolTip(d.Date) +
           "<br></span>" +
           "<strong>" +
-          selectedVar2 +
+          selectedSecondaryMetricName +
           ":</strong> <span style='color:red'>" +
           d.people_vaccinated +
           "</span>"
@@ -1287,7 +1229,7 @@ function buildGraph(error, totals, details) {
   plot.call(tipG);
   plot2.call(tipG2);
 
-  if (graph1) {
+  if (updatePrimaryGraph) {
     d3.select("#graph_title").remove();
     d3.select("#map_title").remove();
     svg1
@@ -1296,7 +1238,7 @@ function buildGraph(error, totals, details) {
       .attr("x", 150)
       .attr("y", 30)
       .style("font-size", "36px")
-      .text("COVID-19 Map (" + selectedVar + ")");
+      .text("COVID-19 Map (" + selectedPrimaryMetricName + ")");
 
     plot
       .append("text")
@@ -1309,7 +1251,7 @@ function buildGraph(error, totals, details) {
       .text(
         selectedCountry +
           " " +
-          selectedVar +
+          selectedPrimaryMetricName +
           " (Population " +
           population +
           " )",
@@ -1351,24 +1293,24 @@ function buildGraph(error, totals, details) {
       .attr("width", xG.rangeBand())
       // .attr("width", 4)
       .attr("y", function (d) {
-        if (newVar == "Confirmed") {
+        if (currentPrimaryMetric == "Confirmed") {
           return yG(d.Confirmed);
-        } else if (newVar == "Confirmed_last24h") {
+        } else if (currentPrimaryMetric == "Confirmed_last24h") {
           return yG(d.Confirmed_last24h);
-        } else if (newVar == "Deaths") {
+        } else if (currentPrimaryMetric == "Deaths") {
           return yG(d.Deaths);
-        } else if (newVar == "Deaths_last24h") {
+        } else if (currentPrimaryMetric == "Deaths_last24h") {
           return yG(d.Deaths_last24h);
         }
       })
       .attr("height", function (d) {
-        if (newVar == "Confirmed") {
+        if (currentPrimaryMetric == "Confirmed") {
           return heightG - yG(d.Confirmed);
-        } else if (newVar == "Confirmed_last24h") {
+        } else if (currentPrimaryMetric == "Confirmed_last24h") {
           return heightG - yG(d.Confirmed_last24h);
-        } else if (newVar == "Deaths") {
+        } else if (currentPrimaryMetric == "Deaths") {
           return heightG - yG(d.Deaths);
-        } else if (newVar == "Deaths_last24h") {
+        } else if (currentPrimaryMetric == "Deaths_last24h") {
           return heightG - yG(d.Deaths_last24h);
         }
       })
@@ -1376,7 +1318,7 @@ function buildGraph(error, totals, details) {
       .on("mouseout", tipG.hide);
   }
 
-  if (graph2) {
+  if (updateSecondaryGraph) {
     d3.select("#graph_title2").remove();
     //vaccine graph
     plot2
@@ -1389,7 +1331,7 @@ function buildGraph(error, totals, details) {
       .text(
         selectedCountry +
           " " +
-          selectedVar2 +
+          selectedSecondaryMetricName +
           " (Population " +
           population +
           " )",
@@ -1434,24 +1376,24 @@ function buildGraph(error, totals, details) {
       .attr("width", xG2.rangeBand())
       // .attr("width", 4)
       .attr("y", function (d) {
-        if (newVar2 == "total_vaccinations") {
+        if (currentSecondaryMetric == "total_vaccinations") {
           return yG2(d.total_vaccinations);
-        } else if (newVar2 == "vaccinations_last24h") {
+        } else if (currentSecondaryMetric == "vaccinations_last24h") {
           return yG2(d.vaccinations_last24h);
-        } else if (newVar2 == "people_fully_vaccinated") {
+        } else if (currentSecondaryMetric == "people_fully_vaccinated") {
           return yG2(d.people_fully_vaccinated);
-        } else if (newVar2 == "people_vaccinated") {
+        } else if (currentSecondaryMetric == "people_vaccinated") {
           return yG2(d.people_vaccinated);
         }
       })
       .attr("height", function (d) {
-        if (newVar2 == "total_vaccinations") {
+        if (currentSecondaryMetric == "total_vaccinations") {
           return heightG - yG2(d.total_vaccinations);
-        } else if (newVar2 == "vaccinations_last24h") {
+        } else if (currentSecondaryMetric == "vaccinations_last24h") {
           return heightG - yG2(d.vaccinations_last24h);
-        } else if (newVar2 == "people_fully_vaccinated") {
+        } else if (currentSecondaryMetric == "people_fully_vaccinated") {
           return heightG - yG2(d.people_fully_vaccinated);
-        } else if (newVar2 == "people_vaccinated") {
+        } else if (currentSecondaryMetric == "people_vaccinated") {
           return heightG - yG2(d.people_vaccinated);
         }
       })
@@ -1465,8 +1407,8 @@ function buildGraph(error, totals, details) {
   // });
 
   // x.domain(data.map(function(d) {}))
-  graph1 = false;
-  graph2 = false;
+  updatePrimaryGraph = false;
+  updateSecondaryGraph = false;
 }
 
 function setMap() {
@@ -1532,19 +1474,19 @@ function processData(error, world, countryData) {
         //too find max date range
         attributeArray.push(data_i[k].date.split("T")[0]); //array to store all the dates
       }
-      if (newVar == "Confirmed") {
+      if (currentPrimaryMetric == "Confirmed") {
         countries[i].properties[data_i[k].date.split("T")[0]] = Number(
           data_i[k].cases,
         ); //store the number of cases for each date in the properties of the country
-      } else if (newVar == "Confirmed_last24h") {
+      } else if (currentPrimaryMetric == "Confirmed_last24h") {
         countries[i].properties[data_i[k].date.split("T")[0]] = Number(
           data_i[k].cases_last24,
         ); //store the number of cases for each date in the properties of the country
-      } else if (newVar == "Deaths") {
+      } else if (currentPrimaryMetric == "Deaths") {
         countries[i].properties[data_i[k].date.split("T")[0]] = Number(
           data_i[k].deaths,
         ); //store the number of cases for each date in the properties of the country
-      } else if (newVar == "Deaths_last24h") {
+      } else if (currentPrimaryMetric == "Deaths_last24h") {
         countries[i].properties[data_i[k].date.split("T")[0]] = Number(
           data_i[k].deaths_last24,
         ); //store the number of cases for each date in the properties of the country
@@ -1677,8 +1619,8 @@ function sequenceMap() {
       selectedCountry = d.properties.name;
       selectedCountryISO = d.id;
       // console.log(d.id);
-      graph1 = true;
-      graph2 = true;
+      updatePrimaryGraph = true;
+      updateSecondaryGraph = true;
       queue() // queue function loads all data asynchronously
         .defer(d3.json, "/getTotalByDay?country_code=" + d.id)
         .defer(d3.json, "/getDetails?country_code=" + d.id)
