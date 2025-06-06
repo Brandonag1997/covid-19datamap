@@ -23,10 +23,10 @@ var margin = {
     width: width - 100,
   },
   mapTranslate = [480, 400];
-formatDate = d3.time.format("%b-%d");
-formatDateDB = d3.time.format("%Y-%m-%d");
+const formatDate = d3.timeFormat("%b-%d-%Y");
+const formatDateDB = d3.timeFormat("%Y-%m-%d");
 var startingValue, endingValue;
-parseDate = d3.time.format("%Y-%m-%d").parse;
+parseDate = d3.timeParse("%Y-%m-%d");
 var handle, slider, sliderBox, brush, button, svg, x, xaxis;
 // data to be loaded in
 let worldDataSaved = null;
@@ -535,9 +535,9 @@ var plot; //the svg for the barchart
 var plot2; //the svg for the vaccine barchart
 var heightG = 220;
 var widthG = 950;
-var formatDateG = d3.time.format("%b-%Y");
-var tipG; //tooltip for barchart
-var formatDateToolTip = d3.time.format("%d-%b-%Y");
+var formatDateG = d3.timeFormat("%b-%Y");
+var tipG, tipG2; //tooltip for barchart
+var formatDateToolTip = d3.timeFormat("%d-%b-%Y");
 var graphData;
 var maxVar, maxVar2;
 
@@ -549,7 +549,6 @@ var tip = d3
   .attr("class", "d3-tip")
   .offset([-10, 0])
   .html(function (d) {
-    // return "<strong>" + d.properties.name + "</strong>";
     return (
       "<strong>Country: </strong><span class='details'>" +
       d.properties.name +
@@ -563,13 +562,19 @@ var tip = d3
   });
 
 var firstDay, lastDay;
-function getScaleData() {
-  queue() // queue function loads all data asynchronously
-    .defer(d3.json, "/dateRange") //range of dates we're working with
-    .defer(d3.json, "/getMax") //max value in dataset excluding world total, used to set legend scale
-    .defer(d3.json, "/getTotalMax") //max world total used to set graph legend
-    // .defer(d3.json, "/getTotalByDay")
-    .await(dateCallback);
+async function getScaleData() {
+  try {
+    //load all data asynchronously
+    const [data, maxData, maxTotals] = await Promise.all([
+      d3.json("/dateRange"), //range of dates we're working with
+      d3.json("/getMax"), //max value in dataset excluding world total, used to set legend scale
+      d3.json("/getTotalMax"), //max world total used to set graph legend
+    ]);
+    dateCallback(null, data, maxData, maxTotals);
+  } catch (error) {
+    console.log("Error loading scale data:", error);
+    dateCallback(error, null, null, null);
+  }
 }
 function dateCallback(error, data, maxData, maxTotals) {
   startingValue = new Date(
@@ -599,21 +604,21 @@ function dateCallback(error, data, maxData, maxTotals) {
     maxTotals["people_fully_vaccinated"];
   maxValues.world.vaccinations_last24h = maxTotals["vaccinations_last24h"];
 
-  ramp = d3.scale
-    .log()
+  ramp = d3
+    .scaleLog()
     .clamp(true)
     .domain([1, maxValues.country.Confirmed])
     .range([lowColor, highColor])
     .nice();
-  ramp2 = d3.scale
-    .log()
+  ramp2 = d3
+    .scaleLog()
     .clamp(true)
     .domain([1, maxValues.country.total_vaccinations])
     .range([lowColor, highColor])
     .nice();
 
   buildSlider();
-  updatePage(selectedPrimaryMetricName);
+  updatePage();
   // buildLegend();
   // buildGraph('World', selectedPrimaryMetricName);
   // setMap();
@@ -621,8 +626,8 @@ function dateCallback(error, data, maxData, maxTotals) {
 
 function buildSlider() {
   //scale for slider
-  x = d3.time
-    .scale()
+  x = d3
+    .scaleTime()
     .domain([startingValue, endingValue])
     .range([0, sliderPosition.width]) //
     .clamp(true);
@@ -641,11 +646,6 @@ function buildSlider() {
     .attr("y", 30)
     .style("font-size", "36px")
     .text("COVID-19 Map (" + selectedPrimaryMetricName + ")");
-
-  // svg1.append("svg")
-  //   .attr("id","svgBox")
-  //   .attr("width", width + margin.left + margin.right + 100)
-  //   .attr("height", 150);
 
   dropDownInfo = d3
     .select("body")
@@ -733,7 +733,7 @@ function buildSlider() {
     selectedPrimaryMetricName = d3.select("select.var-list").property("value");
     currentPrimaryMetric = metrics.primary[selectedPrimaryMetricName];
     selectedCountry = "World";
-    updatePage(currentPrimaryMetric);
+    updatePage();
   }
 
   function onchange2() {
@@ -743,17 +743,7 @@ function buildSlider() {
       .property("value");
     currentSecondaryMetric = metrics.secondary[selectedSecondaryMetricName];
 
-    if (selectedCountry == "World") {
-      queue() // queue function loads all data asynchronously
-        .defer(d3.json, "/getTotalByDay") //data for the whole world
-        .defer(d3.json, "/getDetails")
-        .await(buildGraph);
-    } else {
-      queue() // queue function loads all data asynchronously
-        .defer(d3.json, "/getTotalByDay?country_code=" + selectedCountryISO)
-        .defer(d3.json, "/getDetails?country_code=" + selectedCountryISO)
-        .await(buildGraph);
-    }
+    getCountryData(selectedCountry, selectedCountryISO);
   }
 
   function onchangeCountry() {
@@ -762,17 +752,8 @@ function buildSlider() {
       dropDownCountryVars[dropDownCountryChoices.indexOf(selectedCountry)];
     updatePrimaryGraph = true;
     updateSecondaryGraph = true;
-    if (selectedCountry == "World") {
-      queue() // queue function loads all data asynchronously
-        .defer(d3.json, "/getTotalByDay") //data for the whole world
-        .defer(d3.json, "/getDetails")
-        .await(buildGraph);
-    } else {
-      queue() // queue function loads all data asynchronously
-        .defer(d3.json, "/getTotalByDay?country_code=" + selectedCountryISO)
-        .defer(d3.json, "/getDetails?country_code=" + selectedCountryISO)
-        .await(buildGraph);
-    }
+
+    getCountryData(selectedCountry, selectedCountryISO);
   }
 
   svg = svg1
@@ -782,69 +763,73 @@ function buildSlider() {
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
   ////slider code
-  //brush for slider
-  brush = d3.svg.brush().x(x).extent([startingValue, startingValue]);
+  const sliderContainer = d3
+    .select("body")
+    .append("div")
+    .attr("id", "slider-container")
+    .style("margin", "30px 100px");
 
-  //sliderBox = svgBox
-  backGroundBox = svg1
-    .append("rect")
-    .attr("transform", "translate(" + 0 + "," + 550 + ")")
-    .attr("height", 200)
-    .attr("width", sliderPosition.width + 200)
-    .attr("fill", "white");
+  const slider = d3
+    .sliderBottom()
+    .min(startingValue)
+    .max(endingValue)
+    .step(1000 * 60 * 60 * 24)
+    .width(sliderPosition.width)
+    .tickFormat(formatDate)
+    .tickValues([startingValue, endingValue])
+    .default(startingValue)
+    .on("onchange", (val) => {
+      const formatted = formatDateDB(val);
+      currentAttribute = attributeArray.indexOf(formatted);
+      if (currentAttribute !== -1) {
+        sequenceMap();
+      }
+    });
 
-  sliderBox = svg1
+  const gSlider = sliderContainer
+    .append("svg")
+    .attr("width", sliderPosition.width + 100)
+    .attr("height", 80)
     .append("g")
-    .attr("class", "slider-box")
-    .attr("transform", "translate(" + 100 + "," + 590 + ")")
-    .attr("height", 200)
-    .attr("width", sliderPosition.width + 200)
-    .call(
-      d3.svg
-        .axis()
-        .scale(x)
-        .orient("bottom")
-        .tickFormat(function (d) {
-          return formatDate(d);
-        })
-        .tickSize(0)
-        .tickPadding(12)
-        .tickValues([x.domain()[0], x.domain()[1]]),
-    );
-
-  xaxis = sliderBox.append("g");
-
-  slider = sliderBox.append("g").attr("class", "slider").call(brush);
-
-  slider.selectAll(".extent,.resize").remove();
-
-  slider.select(".background").attr("height", 100);
-
-  handle = slider.append("g").attr("class", "handle");
-
-  handle
-    .append("path")
-    .attr("transform", "translate(0," + 0 + ")")
-    .attr("d", "M 0 -10 V 10");
-
-  handle
-    .append("text")
-    .text(formatDate(startingValue))
-    .attr("transform", "translate(" + -18 + " ," + -15 + ")");
+    .attr("transform", "translate(30,30)")
+    .call(slider);
 
   button = d3
     .select("body")
     .append("button")
     .attr("class", "play")
     .text("Play");
+
+  let isPlaying = false;
+  let interval = null;
+  button.on("click", () => {
+    isPlaying = !isPlaying;
+    button.text(isPlaying ? "Pause" : "Play");
+    if (isPlaying) {
+      let i = 0;
+
+      interval = d3.interval(() => {
+        //stop slider when last day with data is reached
+        if (i >= attributeArray.length) {
+          interval.stop();
+          isPlaying = false;
+          button.text("Play");
+          return;
+        }
+        //move the slider to the next day
+        const nextDate = parseDate(attributeArray[i]);
+        slider.value(nextDate);
+        i++;
+      }, 100);
+    } else {
+      interval.stop();
+    }
+  });
 }
 
-function updatePage(currentPrimaryMetric) {
+function updatePage() {
   buildLegend();
-  queue() // queue function loads all data asynchronously
-    .defer(d3.json, "/getTotalByDay") //data for the whole world
-    .defer(d3.json, "/getDetails")
-    .await(buildGraph);
+  getCountryData("World", null);
   setMap();
 }
 
@@ -890,8 +875,8 @@ function buildLegend() {
     .attr("transform", "translate(0,10)");
 
   function createRamp(maxData) {
-    return d3.scale
-      .log()
+    return d3
+      .scaleLog()
       .clamp(true)
       .domain([1, maxData])
       .range([lowColor, highColor])
@@ -903,22 +888,9 @@ function buildLegend() {
   ramp2 = createRamp(maxValues.country[currentSecondaryMetric]);
   maxVar2 = maxValues.country[currentSecondaryMetric];
 
-  y = d3.scale.log().range([h, 0]).domain([1, maxVar]);
+  y = d3.scaleLog().range([h, 0]).domain([1, maxVar]);
 
-  yaxis = d3.svg
-    .axis()
-    .scale(y)
-    .orient("right")
-    .ticks(5)
-    .tickSize(1)
-    .tickFormat(function (interval, d) {
-      // if ((d%10 == 6) || (d%10 == 2) || (d%10 == 0)) {
-      if (d % 10 == 2) {
-        return Intl.NumberFormat().format(interval);
-      } else {
-        return " ";
-      }
-    });
+  yaxis = d3.axisRight(y).ticks(5, "~s").tickSize(1);
 
   key
     .append("g")
@@ -931,40 +903,26 @@ function buildGraph(error, totals, details) {
   graphData = totals;
   countryDetails = details;
   const population = Intl.NumberFormat().format(countryDetails[0].population);
-  // var	parseDateG = d3.time.format("%Y-%m").parse;
+  // var	parseDateG = d3.timeParse("%Y-%m");
 
   var xG, yG, xAxisG, yAxisG;
   var xG2, yG2, xAxisG2, yAxisG2;
   if (updatePrimaryGraph) {
     maxVar = maxValues.world[currentPrimaryMetric];
-    /*
-    if (currentPrimaryMetric == "Confirmed") {
-      maxVar = maxValues.world.Confirmed;
-    } else if (currentPrimaryMetric == "Confirmed_last24h") {
-      maxVar = maxValues.world.Confirmed_last24h;
-    } else if (currentPrimaryMetric == "Deaths") {
-      maxVar = maxValues.world.Deaths;
-    } else if (currentPrimaryMetric == "Deaths_last24h") {
-      maxVar = maxValues.world.Deaths_last24h;
-    }*/
-    xG = d3.scale.ordinal().rangeRoundBands([0, widthG], 0.05);
-    yG = d3.scale.linear().domain([0, maxVar]).range([heightG, 0]);
+    xG = d3.scaleBand().range([0, widthG]).padding(0.05);
+    yG = d3.scaleLinear().domain([0, maxVar]).range([heightG, 0]);
 
-    xAxisG = d3.svg
-      .axis()
-      .scale(xG)
-      .orient("bottom")
-      .tickFormat(function (interval, d) {
-        var formatTest = d3.time.format("%d");
-        if (formatTest(interval) == "01") {
-          //only show ticks for the first of every month
-          return formatDateG(interval);
-        } else {
-          return " ";
-        }
-      });
+    xAxisG = d3.axisBottom(xG).tickFormat(function (interval, d) {
+      var formatTest = d3.timeFormat("%d");
+      if (formatTest(interval) == "01") {
+        //only show ticks for the first of every month
+        return formatDateG(interval);
+      } else {
+        return " ";
+      }
+    });
 
-    yAxisG = d3.svg.axis().scale(yG).orient("left").ticks(10);
+    yAxisG = d3.axisLeft(yG).ticks(10);
   }
   if (updateSecondaryGraph) {
     if (currentSecondaryMetric == "total_vaccinations") {
@@ -977,24 +935,20 @@ function buildGraph(error, totals, details) {
       maxVar2 = maxValues.world.people_vaccinated;
     }
 
-    xG2 = d3.scale.ordinal().rangeRoundBands([0, widthG], 0.05);
-    yG2 = d3.scale.linear().domain([0, maxVar2]).range([heightG, 0]);
+    xG2 = d3.scaleBand().range([0, widthG]).padding(0.05);
+    yG2 = d3.scaleLinear().domain([0, maxVar2]).range([heightG, 0]);
 
-    xAxisG2 = d3.svg
-      .axis()
-      .scale(xG2)
-      .orient("bottom")
-      .tickFormat(function (interval, d) {
-        var formatTest = d3.time.format("%d");
-        if (formatTest(interval) == "01") {
-          //only show ticks for the first of every month
-          return formatDateG(interval);
-        } else {
-          return " ";
-        }
-      });
+    xAxisG2 = d3.axisBottom(xG2).tickFormat(function (interval, d) {
+      var formatTest = d3.timeFormat("%d");
+      if (formatTest(interval) == "01") {
+        //only show ticks for the first of every month
+        return formatDateG(interval);
+      } else {
+        return " ";
+      }
+    });
 
-    yAxisG2 = d3.svg.axis().scale(yG2).orient("left").ticks(10);
+    yAxisG2 = d3.axisLeft(yG2).ticks(10);
   }
 
   if (updatePrimaryGraph) {
@@ -1035,12 +989,6 @@ function buildGraph(error, totals, details) {
     d.people_vaccinated = +d.people_vaccinated;
   });
 
-  // xGdomain = graphData.map(function(d) {return d.Date; });
-  // console.log(xGdomain[474]);
-  // let lastDayG = xGdomain[xGdomain.length - 1];
-  // lastDayG.setDate(lastDayG.getDate() + 1);
-  // xGdomain.push(lastDayG);
-  // xG.domain(xGdomain);
   if (updatePrimaryGraph) {
     xG.domain(
       graphData.map(function (d) {
@@ -1290,7 +1238,7 @@ function buildGraph(error, totals, details) {
       .attr("x", function (d) {
         return xG(d.Date);
       })
-      .attr("width", xG.rangeBand())
+      .attr("width", xG.bandwidth())
       // .attr("width", 4)
       .attr("y", function (d) {
         if (currentPrimaryMetric == "Confirmed") {
@@ -1360,8 +1308,6 @@ function buildGraph(error, totals, details) {
       .attr("y", 6)
       .attr("dy", ".71em")
       .style("text-anchor", "end");
-    // .text("Value ($)");
-    // console.log(xG.rangeBand());
 
     plot2
       .selectAll("bar")
@@ -1373,7 +1319,7 @@ function buildGraph(error, totals, details) {
       .attr("x", function (d) {
         return xG2(d.Date);
       })
-      .attr("width", xG2.rangeBand())
+      .attr("width", xG2.bandwidth())
       // .attr("width", 4)
       .attr("y", function (d) {
         if (currentSecondaryMetric == "total_vaccinations") {
@@ -1400,24 +1346,17 @@ function buildGraph(error, totals, details) {
       .on("mouseover", tipG2.show)
       .on("mouseout", tipG2.hide);
   }
-
-  // Object.entries(graphData).forEach(([key, value]) => {
-  //   console.log(key + ' - ' + value) // key - value
-  //
-  // });
-
-  // x.domain(data.map(function(d) {}))
   updatePrimaryGraph = false;
   updateSecondaryGraph = false;
 }
 
 function setMap() {
-  projection = d3.geo
-    .mercator() // define projection
+  projection = d3
+    .geoMercator() // define projection
     .scale(100)
     .translate([width / 2, height / 2]);
 
-  path = d3.geo.path().projection(projection);
+  path = d3.geoPath().projection(projection);
 
   svg
     .append("svg") // append a svg to hold map
@@ -1440,21 +1379,24 @@ function setMap() {
   }
 }
 
-function loadData() {
-  queue() // queue function loads all external data files asynchronously
-    .defer(d3.json, "countries-110m.json") // datamap geometries
-    .defer(d3.json, "/countrydata") //data for each country
-    .await(processData); // once all files are loaded, call the processData function
+async function loadData() {
+  try {
+    //loads all external data files asynchronously
+    const [world, countryData] = await Promise.all([
+      d3.json("countries-110m.json"), // datamap geometries
+      d3.json("/countrydata"), //data for each country
+    ]);
+    processData(null, world, countryData);
+  } catch (error) {
+    console.log("Error loading external data:", error);
+    processData(error, null, null);
+  }
 }
 
 function processData(error, world, countryData) {
-  // console.log("OWID Data", countryData);
-  // console.log({world});
-  // console.log({countryData});
   worldDataSaved = world;
   countryDataSaved = countryData;
   var countries = world.objects.countries.geometries; // path to geometries
-  // console.group(countries);
   var emptyCountries = ["Somaliland", "Kosovo", "N. Cyprus"]; //need to remove non iso countries
   for (var i = 0; i < countries.length; i++) {
     if (emptyCountries.includes(countries[i].properties.name)) {
@@ -1462,12 +1404,10 @@ function processData(error, world, countryData) {
       i--;
     }
   }
-  // console.log(countries);
+
   for (var i in countries) {
     // for each geometry object
-    // data_i=countryData[parseInt(countries[i].id)];
     data_i = countryData[countries[i].id];
-    // console.log(parseInt(countries[i].id),countries[i]);
     for (var k in data_i) {
       //for each day that country reported cases
       if (attributeArray.indexOf(data_i[k].date.split("T")[0]) == -1) {
@@ -1493,94 +1433,10 @@ function processData(error, world, countryData) {
       }
     }
   }
-  // currentAttribute = attributeArray.indexOf(startingValue);
-  // console.log(currentAttribute);
   currentAttribute = 0;
   drawMap(world);
 
-  xaxis
-    .attr("class", "x axis")
-    .attr("transform", "translate(0," + 0 + ")")
-    // .attr("transform", "translate(0," + (sliderPosition.height / 2) + ")")
-    .call(
-      d3.svg
-        .axis()
-        .scale(x)
-        .orient("bottom")
-        .tickFormat(function (d) {
-          return formatDate(d);
-        })
-        .tickSize(0)
-        .tickPadding(12)
-        .tickValues(x.domain()[0], x.domain()[1]),
-    )
-    .select(".domain")
-    .select(function () {
-      return this.parentNode.appendChild(this.cloneNode(true));
-    })
-    .attr("class", "halo");
-  // .select(this).moveToFront();
-
-  function brushed() {
-    var value = brush.extent()[0];
-    // firstDay = formatDate(parseDate(startingValue))
-    if (d3.event.sourceEvent) {
-      handle.select("text");
-      value = x.invert(d3.mouse(this)[0]);
-      brush.extent([value, value]);
-    }
-    currentAttribute = attributeArray.indexOf(formatDateDB(value));
-    // if(currentAttribute < attributeArray.length-1) {
-    //   currentAttribute +=1;  // increment the current attribute counter
-    // } else {
-    //   currentAttribute = 0;  // or reset it to zero
-    // }
-    if (currentAttribute != -1) {
-      sequenceMap();
-    }
-
-    handle.attr("transform", "translate(" + x(value) + ",0)");
-    handle.select("text").text(formatDate(value));
-  }
-
-  brush.on("brush", brushed);
-  button.on("click", playAnimation.bind(null, 30000));
-
-  function playAnimation(timeD) {
-    button
-      // .transition()
-      // // .delay(500*4*1000)
-      // .duration(50)
-      .style("opacity", 0);
-
-    slider
-      .call(brush.extent([startingValue, startingValue])) //new Date('2020-03-01'), new Date('2020-03-01')
-      .call(brush.event)
-      .transition()
-      .ease("linear")
-      // .delay(500*4)
-      .duration(timeD)
-      .call(brush.extent([endingValue, endingValue])) //new Date('2020-03-31'), new Date('2020-03-31')
-      .call(brush.event)
-      .transition()
-      .call(endAnimation);
-  }
-
-  function endAnimation() {
-    button
-      // .transition()
-      // // .delay(10500*4)
-      // .duration(10000)
-      // // .duration(500*4)
-      .style("opacity", 1);
-  }
-  // playAnimation();\
-  // currentAttribute = 0;
   sequenceMap();
-  // playAnimation(300);
-
-  // console.log(startingValue);
-  // console.log(currentAttribute);
 }
 
 function drawMap(world) {
@@ -1618,13 +1474,9 @@ function sequenceMap() {
     .on("click", function (d) {
       selectedCountry = d.properties.name;
       selectedCountryISO = d.id;
-      // console.log(d.id);
       updatePrimaryGraph = true;
       updateSecondaryGraph = true;
-      queue() // queue function loads all data asynchronously
-        .defer(d3.json, "/getTotalByDay?country_code=" + d.id)
-        .defer(d3.json, "/getDetails?country_code=" + d.id)
-        .await(buildGraph);
+      getCountryData(selectedCountry, selectedCountryISO);
     })
     .transition() //select all the countries and prepare for a transition to new values
     .duration(100) // give it a smooth time period for the transition
@@ -1636,6 +1488,28 @@ function sequenceMap() {
     .style("fill", function (d) {
       return ramp(d.properties[attributeArray[currentAttribute]]);
     });
+}
+
+async function getCountryData(selectedCountry, selectedCountryISO) {
+  try {
+    if (selectedCountry == "World") {
+      //fixme api call strings later
+      const [totals, details] = await Promise.all([
+        d3.json("/getTotalByDay"),
+        d3.json("/getDetails"),
+      ]);
+      buildGraph(null, totals, details);
+    } else {
+      const [totals, details] = await Promise.all([
+        d3.json("/getTotalByDay?country_code=" + selectedCountryISO),
+        d3.json("/getDetails?country_code=" + selectedCountryISO),
+      ]);
+      buildGraph(null, totals, details);
+    }
+  } catch (error) {
+    console.log("Error getting country data:", error);
+    buildGraph(error, null, null);
+  }
 }
 
 window.onload = getScaleData(); // load in data to scale map legend and slider
